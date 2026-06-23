@@ -17,6 +17,9 @@ BrokerRequestType = Literal[
     "state",
     "models",
     "stats",
+    "messages",
+    "last-assistant-text",
+    "commands",
 ]
 BROKER_REQUEST_TYPES = {
     "ping",
@@ -29,6 +32,9 @@ BROKER_REQUEST_TYPES = {
     "state",
     "models",
     "stats",
+    "messages",
+    "last-assistant-text",
+    "commands",
 }
 PASS_THROUGH_REQUEST_TYPES = {
     "prompt",
@@ -38,6 +44,9 @@ PASS_THROUGH_REQUEST_TYPES = {
     "state",
     "models",
     "stats",
+    "messages",
+    "last-assistant-text",
+    "commands",
 }
 
 

@@ -65,6 +65,12 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_available_models', 'success': True, 'data': ['gpt-4', 'claude'] }), flush=True)\n"
         "    elif payload.get('type') == 'get_session_stats':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_session_stats', 'success': True, 'data': {'messages': 3, 'tools': 2}}), flush=True)\n"
+        "    elif payload.get('type') == 'get_messages':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_messages', 'success': True, 'data': [{'role': 'user', 'content': 'hello'}, {'role': 'assistant', 'content': 'done'}]}), flush=True)\n"
+        "    elif payload.get('type') == 'get_last_assistant_text':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_last_assistant_text', 'success': True, 'data': {'text': 'previous assistant output'}}), flush=True)\n"
+        "    elif payload.get('type') == 'get_commands':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_commands', 'success': True, 'data': [{'name': 'echo', 'description': 'repeat input', 'source': 'builtin'}, {'name': 'run', 'description': 'run shell', 'source': 'plugin'}]}), flush=True)\n"
         "    elif payload.get('type') in ('steer', 'follow_up', 'abort'):\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n"
         "        print(json.dumps({'type': 'agent_end', 'messages': []}), flush=True)\n"
@@ -248,6 +254,9 @@ async def test_broker_server_forwards_control_commands_without_event_streaming(
         ("state", "get_state", "sessionId"),
         ("models", "get_available_models", "gpt-4"),
         ("stats", "get_session_stats", "messages"),
+        ("messages", "get_messages", "role"),
+        ("last-assistant-text", "get_last_assistant_text", "text"),
+        ("commands", "get_commands", "name"),
     ],
 )
 async def test_broker_server_maps_read_only_commands_to_pi_commands(
@@ -287,8 +296,15 @@ async def test_broker_server_maps_read_only_commands_to_pi_commands(
         assert responses[0]["command"] == pi_command
         assert responses[0]["success"] is True
         response_data = responses[0]["data"]
-        if isinstance(response_data, (dict, list)):
+        if isinstance(response_data, dict):
             assert data_key in response_data
+        elif isinstance(response_data, list):
+            assert response_data
+            first_item = response_data[0]
+            if isinstance(first_item, dict):
+                assert data_key in first_item
+            else:
+                assert data_key in response_data
         else:
             raise AssertionError("Expected list or dict data")
 

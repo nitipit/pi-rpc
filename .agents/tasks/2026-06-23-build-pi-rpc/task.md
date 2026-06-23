@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-24T00:16:03+07:00
+updated: 2026-06-24T00:22:59+07:00
 blocked_by: []
 ---
 
@@ -29,8 +29,9 @@ validated, and committed before moving on.
       events until `agent_end`, print text deltas for humans and JSONL for tools.
 - [x] v0.5 run-control: steer/follow-up/abort pass-through.
 - [x] v0.6 read-only session visibility: `state`, `models`, `stats`.
-- [ ] Later versions: richer session commands, extension UI,
-      docs, and packaging polish.
+- [x] v0.7 broader read-only inspection: `messages`, `last-assistant-text`,
+      `commands`.
+- [ ] Later versions: session mutators, extension UI, docs, and packaging polish.
 
 ## Attachments
 
@@ -54,3 +55,4 @@ modular so Unix socket can later grow into TCP or other transports.
 - 2026-06-24T00:00:53+07:00 — Delegated v0.4 implementation to python-runtime-engineer and added prompt/event streaming.
 - 2026-06-24T00:06:25+07:00 — Delegated and implemented v0.5 run-control pass-through and CLI surface commands.
 - 2026-06-24T00:16:03+07:00 — Delegated and implemented v0.6 read-only session visibility commands.
+- 2026-06-24T00:22:59+07:00 — Delegated and implemented v0.7 broader read-only inspection commands.

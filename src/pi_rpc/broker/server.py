@@ -21,6 +21,9 @@ _BROKER_TO_PI_COMMAND = {
     "state": "get_state",
     "models": "get_available_models",
     "stats": "get_session_stats",
+    "messages": "get_messages",
+    "last-assistant-text": "get_last_assistant_text",
+    "commands": "get_commands",
 }
 
 

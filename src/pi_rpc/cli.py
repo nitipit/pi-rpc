@@ -6,7 +6,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Callable
-from typing import NoReturn
+from typing import NoReturn, cast
 
 from cyclopts import App
 
@@ -22,6 +22,9 @@ PI_READ_ONLY_COMMANDS = {
     "state": "get_state",
     "models": "get_available_models",
     "stats": "get_session_stats",
+    "messages": "get_messages",
+    "last-assistant-text": "get_last_assistant_text",
+    "commands": "get_commands",
 }
 
 app = App(help="Remote control for long-running Pi RPC sessions.")
@@ -172,7 +175,20 @@ def _print_command_summary(command: str, response: JsonObject) -> None:
     """Print a compact human-readable summary for read-only responses."""
 
     data = response.get("data")
-    print(f"{command.replace('_', ' ').title()} response:")
+    print(f"{command.replace('-', ' ').replace('_', ' ').title()} response:")
+
+    if command == "messages":
+        _print_messages_summary(data)
+        return
+
+    if command == "last-assistant-text":
+        _print_last_assistant_text_summary(data)
+        return
+
+    if command == "commands":
+        _print_commands_summary(data)
+        return
+
     if command == "models" and isinstance(data, list):
         print(f"  models: {len(data)} available")
         for model in data:
@@ -180,8 +196,6 @@ def _print_command_summary(command: str, response: JsonObject) -> None:
         return
 
     if isinstance(data, dict):
-        if command == "state" and "sessionId" in data:
-            print(f"  session: {data['sessionId']}")
         for key, value in data.items():
             if isinstance(value, (dict, list)):
                 rendered = json.dumps(value, sort_keys=True)
@@ -197,6 +211,74 @@ def _print_command_summary(command: str, response: JsonObject) -> None:
         return
 
     print(f"  data: {data}")
+
+
+def _print_messages_summary(data: object) -> None:
+    messages = data if isinstance(data, list) else []
+    if not messages:
+        print("  (no messages)")
+        return
+
+    for message in messages:
+        if not isinstance(message, dict):
+            print(f"  - {message}")
+            continue
+
+        role = message.get("role", "unknown")
+        content = message.get("content")
+        if isinstance(content, list):
+            rendered_parts: list[str] = []
+            for chunk in content:
+                if isinstance(chunk, dict) and isinstance(chunk.get("text"), str):
+                    rendered_parts.append(cast("str", chunk.get("text")))
+                elif isinstance(chunk, str):
+                    rendered_parts.append(chunk)
+            content_text = "\n".join(rendered_parts)
+        elif isinstance(content, str):
+            content_text = content
+        else:
+            content_text = str(content)
+
+        print(f"  {role}: {content_text}")
+
+
+def _print_last_assistant_text_summary(data: object) -> None:
+    text = ""
+    if isinstance(data, str):
+        text = data
+    elif isinstance(data, dict):
+        if isinstance(data.get("text"), str):
+            text = cast("str", data.get("text"))
+    elif isinstance(data, list) and data and isinstance(data[0], str):
+        text = data[0]
+
+    if not text:
+        print("  (no assistant text yet)")
+        return
+
+    print(f"  {text}")
+
+
+def _print_commands_summary(data: object) -> None:
+    commands = data if isinstance(data, list) else []
+    if not commands:
+        print("  (no commands)")
+        return
+
+    for command in commands:
+        if not isinstance(command, dict):
+            print(f"  - {command}")
+            continue
+
+        name = command.get("name") or command.get("command") or "<unnamed>"
+        description = command.get("description")
+        source = command.get("source")
+        line = f"  /{name}"
+        if source:
+            line = f"{line} [{source}]"
+        if description:
+            line = f"{line}: {description}"
+        print(line)
 
 
 async def _run_command_and_print(
@@ -561,6 +643,77 @@ def stats(*, session_id: str, output: OutputFormat = "human") -> None:
     try:
         asyncio.run(
             _run_read_only_command(session_id=session_id, broker_command="stats", output=output)
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def messages(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Show recent messages in a compact listing.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(session_id=session_id, broker_command="messages", output=output)
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="last-assistant-text")
+def last_assistant_text(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Show the last assistant text.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(
+                session_id=session_id, broker_command="last-assistant-text", output=output
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def commands(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Show known Pi commands for the session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(session_id=session_id, broker_command="commands", output=output)
         )
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
