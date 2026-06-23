@@ -1,0 +1,44 @@
+---
+id: 2026-06-23-build-pi-rpc
+title: Build pi-rpc
+status: doing
+created: 2026-06-23T23:00:10+07:00
+updated: 2026-06-23T23:13:35+07:00
+blocked_by: []
+---
+
+## Goal
+
+Build `pi-rpc` into the command-line remote control for long-running Pi RPC
+sessions described in `goal/main.md`.
+
+## Scope
+
+Work version by version, starting with v0.1. Keep each version meaningful,
+validated, and committed before moving on.
+
+## Checklist
+
+- [x] v0.1 foundation: Python/uv/cyclopts scaffold, session-id basics, path
+      helpers, first tests, and project workflow files.
+- [ ] Later versions: broker lifecycle, Unix socket transport, Pi RPC process
+      management, prompt/event streaming, session commands, extension UI,
+      docs, and packaging polish.
+
+## Attachments
+
+None
+
+## Blockers
+
+None
+
+## Notes
+
+Use `--session-id` as the explicit readable stable identity. Keep transport
+modular so Unix socket can later grow into TCP or other transports.
+
+## Activity
+
+- 2026-06-23T23:00:10+07:00 — Created task card and started v0.1 foundation.
+- 2026-06-23T23:13:35+07:00 — Implemented and validated v0.1 foundation.

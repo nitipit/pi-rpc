@@ -1,0 +1,40 @@
+[project]
+name = "pi-rpc"
+version = "0.1.0"
+description = "Command-line remote control for long-running Pi RPC sessions"
+readme = "README.md"
+authors = [
+    { name = "Nitipit Nontasuwan", email = "nitipit@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "cyclopts>=4.19.0",
+    "platformdirs>=4.10.0",
+]
+
+[project.scripts]
+pi-rpc = "pi_rpc.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.15.18",
+    "ty>=0.0.52",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC", "PTH", "RUF"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
