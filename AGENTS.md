@@ -36,7 +36,8 @@ overhead.
 
 Keep delegated tasks bounded and token-efficient. Prefer specialist roles for
 product judgment, protocol review, implementation-heavy work, fresh quality
-review, docs/packaging, and other clearly scoped responsibilities.
+review, docs/packaging, release stop/continue decisions, and other clearly
+scoped responsibilities.
 
 For stateful role sessions, do not repeatedly resend the full initial role
 prompt or unchanged context. Reuse the session's valid context and send only new
@@ -49,7 +50,8 @@ or refresh the missing role instructions only.
 Use GPT models for repo-local role sessions. Prefer token-efficient delegation:
 use `gpt-5.3-codex-spark` for implementation-heavy and docs tasks, `gpt-5.4`
 for coordinator/product/protocol judgment, and reserve `gpt-5.5` for bounded
-fresh quality-review passes where the higher quality is worth the cost.
+fresh quality-review and release-decision passes where the higher quality is
+worth the cost.
 
 ## Documentation Workflow
 

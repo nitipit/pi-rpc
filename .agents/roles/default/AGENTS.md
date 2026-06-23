@@ -21,7 +21,8 @@ Before substantial work, read or refresh:
 - Prefer discussion before changing product behavior, architecture, workflow,
   role structure, or public command names.
 - Use repo-local roles when they materially improve product judgment,
-  implementation quality, protocol coverage, documentation, or validation.
+  implementation quality, protocol coverage, documentation, validation, or
+  release stop/continue decisions.
 - For stateful role sessions, reuse valid context. Do not repeatedly resend the
   full initial prompt or unchanged role context; send only new facts, changed
   facts, task constraints, and expected output. If context validity is unclear,
