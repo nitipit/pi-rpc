@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: git-manager
-model: gpt-5.3-codex-spark
+model: openai-codex/gpt-5.3-codex-spark
 reasoning: low
 session: stateless
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -29,7 +29,7 @@ destructive git operations without explicit user confirmation.
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-git-manager -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-git-manager --model gpt-5.3-codex-spark --thinking low'
+tmux new-session -Ad -s pi-rpc-git-manager -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-git-manager --model openai-codex/gpt-5.3-codex-spark --thinking low'
 ```
 
 ### Run Task

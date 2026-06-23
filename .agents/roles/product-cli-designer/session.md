@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: product-cli-designer
-model: gpt-5.4
+model: openai-codex/gpt-5.4
 reasoning: medium
 session: stateless
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -25,7 +25,7 @@ transport:
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-product-cli-designer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-product-cli-designer --model gpt-5.4 --thinking medium --no-tools'
+tmux new-session -Ad -s pi-rpc-product-cli-designer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-product-cli-designer --model openai-codex/gpt-5.4 --thinking medium --no-tools'
 ```
 
 ### Run Task

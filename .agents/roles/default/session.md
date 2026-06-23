@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: default
-model: gpt-5.4
+model: openai-codex/gpt-5.4
 reasoning: medium
 session: stateful
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -34,7 +34,7 @@ repo root `AGENTS.md` selects it.
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-default-role -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-default-role --model gpt-5.4 --thinking medium'
+tmux new-session -Ad -s pi-rpc-default-role -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-default-role --model openai-codex/gpt-5.4 --thinking medium'
 ```
 
 ### Run Task

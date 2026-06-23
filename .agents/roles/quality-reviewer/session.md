@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: quality-reviewer
-model: gpt-5.5
+model: openai-codex/gpt-5.5
 reasoning: high
 session: stateless
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -29,7 +29,7 @@ large context loading.
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-quality-reviewer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-quality-reviewer --model gpt-5.5 --thinking high'
+tmux new-session -Ad -s pi-rpc-quality-reviewer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-quality-reviewer --model openai-codex/gpt-5.5 --thinking high'
 ```
 
 ### Run Task

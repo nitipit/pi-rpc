@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: pi-rpc-protocol
-model: gpt-5.4
+model: openai-codex/gpt-5.4
 reasoning: high
 session: stateless
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -26,7 +26,7 @@ transport:
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-protocol-reviewer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-protocol-reviewer --model gpt-5.4 --thinking high'
+tmux new-session -Ad -s pi-rpc-protocol-reviewer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-protocol-reviewer --model openai-codex/gpt-5.4 --thinking high'
 ```
 
 ### Run Task

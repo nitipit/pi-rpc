@@ -56,11 +56,12 @@ or refresh the missing role instructions only.
 
 ## Role Model Policy
 
-Use GPT models for repo-local role sessions. Prefer token-efficient delegation:
-use `gpt-5.3-codex-spark` for implementation-heavy and docs tasks, `gpt-5.4`
-for coordinator/product/protocol judgment, and reserve `gpt-5.5` for bounded
-fresh quality-review and release-decision passes where the higher quality is
-worth the cost.
+Use GPT models for repo-local role sessions with provider-qualified Pi model
+IDs. Prefer token-efficient delegation: use
+`openai-codex/gpt-5.3-codex-spark` for implementation-heavy and docs tasks,
+`openai-codex/gpt-5.4` for coordinator/product/protocol judgment, and reserve
+`openai-codex/gpt-5.5` for bounded fresh quality-review and release-decision
+passes where the higher quality is worth the cost.
 
 ## Documentation Workflow
 

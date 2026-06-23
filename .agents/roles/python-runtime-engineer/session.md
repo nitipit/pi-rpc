@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: python-runtime-engineer
-model: gpt-5.3-codex-spark
+model: openai-codex/gpt-5.3-codex-spark
 reasoning: high
 session: stateful
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -28,7 +28,7 @@ transport:
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-python-runtime-engineer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-python-runtime-engineer --model gpt-5.3-codex-spark --thinking high'
+tmux new-session -Ad -s pi-rpc-python-runtime-engineer -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-python-runtime-engineer --model openai-codex/gpt-5.3-codex-spark --thinking high'
 ```
 
 ### Run Task

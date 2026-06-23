@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: release-decider
-model: gpt-5.5
+model: openai-codex/gpt-5.5
 reasoning: high
 session: stateless
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -29,7 +29,7 @@ relevant docs, and validation evidence needed to decide.
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-release-decider -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-release-decider --model gpt-5.5 --thinking high'
+tmux new-session -Ad -s pi-rpc-release-decider -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-release-decider --model openai-codex/gpt-5.5 --thinking high'
 ```
 
 ### Run Task

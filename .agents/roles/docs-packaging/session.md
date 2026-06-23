@@ -3,7 +3,7 @@
 ```yaml
 cli: pi
 role: docs-packaging
-model: gpt-5.3-codex-spark
+model: openai-codex/gpt-5.3-codex-spark
 reasoning: medium
 session: stateless
 cwd: /home/nitipit/space/code/umlab/pi-role-session
@@ -30,7 +30,7 @@ Use bounded docs tasks and avoid loading unrelated implementation context.
 
 ### Start
 ```bash
-tmux new-session -Ad -s pi-rpc-docs-packaging -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-docs-packaging --model gpt-5.3-codex-spark --thinking medium'
+tmux new-session -Ad -s pi-rpc-docs-packaging -c /home/nitipit/space/code/umlab/pi-role-session 'pi --session-id pi-rpc-docs-packaging --model openai-codex/gpt-5.3-codex-spark --thinking medium'
 ```
 
 ### Run Task
