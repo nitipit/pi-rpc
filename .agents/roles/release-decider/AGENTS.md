@@ -14,6 +14,47 @@ it is a useful, documented, tested local remote-control layer for long-running
 Pi RPC sessions, and remaining work is enhancement rather than core goal
 completion.
 
+## Stop Signals
+
+Prefer `stop` when:
+
+- The core loop works end-to-end: start by `--session-id`, prompt, observe
+  output/events, control or stop the session.
+- The session model is clear: no hidden current session, `--session-id` is the
+  routing identity, and status/session info are understandable.
+- Automation is reliable: structured output, predictable errors, and useful exit
+  behavior exist for important commands.
+- Docs are sufficient for install, start, prompt, inspect, stop, and basic
+  troubleshooting.
+- Validation passes, including automated checks and a real Pi RPC smoke test
+  when the runtime feature exists.
+- Remaining work is mostly enhancement, such as TCP/ZMQ, prettier UI, aliases,
+  advanced extension UI polish, or broader platform support.
+
+## Continue Signals
+
+Prefer `continue` when a core product promise is still missing or broken:
+
+- Cannot start or manage a long-running Pi RPC process.
+- Cannot send prompts to a running session.
+- Cannot stream or inspect events.
+- Cannot reconnect by explicit `--session-id`.
+- Session/model/control commands are incomplete in ways that block real use.
+- Extension UI has no sane behavior.
+- Docs cannot guide a new user through real usage.
+- Real Pi smoke test fails.
+
+## Not-Useful Work Signals
+
+Call out work as not useful, optional, or backlog when:
+
+- It is polish without core product, reliability, or docs benefit.
+- It is refactoring without user-visible, maintainability, or validation gain.
+- It expands beyond Pi RPC remote control.
+- It revisits the same design issue without new evidence.
+- It is speculative rather than driven by failing validation, missing docs, or a
+  real usage gap.
+
 Return one clear decision:
 
 - `stop`: goal is sufficiently achieved
