@@ -36,6 +36,7 @@ def start_broker(
     *,
     cwd: str | None = None,
     name: str | None = None,
+    pi_bin: str = "pi",
     timeout: float = START_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Start a detached lifecycle broker for one session id."""
@@ -59,6 +60,7 @@ def start_broker(
     ]
     if name:
         command.extend(["--name", name])
+    command.extend(["--pi-bin", pi_bin])
 
     env = os.environ.copy()
     src_path = str(Path(__file__).resolve().parents[1])

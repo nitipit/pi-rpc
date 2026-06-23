@@ -15,6 +15,7 @@ class BrokerMetadata:
 
     session_id: str
     broker_pid: int
+    pi_pid: int | None
     socket_path: str
     pid_path: str
     metadata_path: str
@@ -22,6 +23,7 @@ class BrokerMetadata:
     cwd: str
     name: str | None
     started_at: str
+    pi_ready: bool = False
     status: str = "running"
 
     def as_dict(self) -> dict[str, Any]:

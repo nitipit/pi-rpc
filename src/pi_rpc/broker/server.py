@@ -9,6 +9,7 @@ from contextlib import suppress
 from pathlib import Path
 
 from pi_rpc.broker.metadata import BrokerMetadata, utc_now_iso, write_metadata
+from pi_rpc.broker.pi_process import PiRpcProcess
 from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
 from pi_rpc.paths import SessionPaths
 from pi_rpc.transport.protocol import JsonObject, ProtocolError, decode_jsonl_line, encode_jsonl
@@ -17,14 +18,28 @@ from pi_rpc.transport.protocol import JsonObject, ProtocolError, decode_jsonl_li
 class BrokerServer:
     """Small lifecycle broker for one session id.
 
-    v0.2 handles process lifecycle and status only. Later versions attach the
-    managed ``pi --mode rpc`` subprocess behind this broker.
+    The broker owns one managed ``pi --mode rpc`` subprocess and exposes local
+    lifecycle/status control over a Unix-domain socket.
     """
 
-    def __init__(self, *, paths: SessionPaths, cwd: str, name: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        paths: SessionPaths,
+        cwd: str,
+        name: str | None = None,
+        pi_bin: str = "pi",
+    ) -> None:
         self.paths = paths
         self.cwd = cwd
         self.name = name
+        self.pi_process = PiRpcProcess(
+            session_id=paths.session_id,
+            cwd=cwd,
+            log_path=paths.log_path,
+            pi_bin=pi_bin,
+            name=name,
+        )
         self.started_at = utc_now_iso()
         self._server: asyncio.AbstractServer | None = None
         self._shutdown_event = asyncio.Event()
@@ -35,6 +50,7 @@ class BrokerServer:
         return BrokerMetadata(
             session_id=self.paths.session_id,
             broker_pid=os.getpid(),
+            pi_pid=self.pi_process.pid,
             socket_path=str(self.paths.socket_path),
             pid_path=str(self.paths.pid_path),
             metadata_path=str(self.paths.metadata_path),
@@ -42,11 +58,13 @@ class BrokerServer:
             cwd=self.cwd,
             name=self.name,
             started_at=self.started_at,
+            pi_ready=self.pi_process.ready,
         )
 
     async def serve(self) -> None:
         """Run the broker until a shutdown request is received."""
         await self._prepare_paths()
+        await self.pi_process.start()
         self._server = await asyncio.start_unix_server(
             self._handle_client, str(self.paths.socket_path)
         )
@@ -57,6 +75,7 @@ class BrokerServer:
             await self._shutdown_event.wait()
             self._server.close()
             await self._server.wait_closed()
+        await self.pi_process.stop()
         self._cleanup_runtime_files()
 
     async def _prepare_paths(self) -> None:
@@ -101,7 +120,11 @@ class BrokerServer:
         return {"type": "pong", "session_id": self.paths.session_id}
 
     async def _status(self, _request: JsonObject) -> JsonObject:
-        return {"type": "status", "metadata": self.metadata.as_dict()}
+        return {
+            "type": "status",
+            "metadata": self.metadata.as_dict(),
+            "pi": self.pi_process.status(),
+        }
 
     async def _shutdown(self, _request: JsonObject) -> JsonObject:
         self._shutdown_event.set()

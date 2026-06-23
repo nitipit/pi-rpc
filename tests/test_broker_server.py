@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,23 @@ import pytest
 from pi_rpc.broker.server import BrokerServer
 from pi_rpc.paths import SessionPaths
 from pi_rpc.transport.unix import UnixBrokerTransport
+
+
+def write_fake_pi(tmp_path: Path) -> Path:
+    script = tmp_path / "fake-pi"
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import json, sys\n"
+        "for line in sys.stdin:\n"
+        "    payload = json.loads(line)\n"
+        "    if payload.get('type') == 'get_state':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_state', 'success': True, 'data': {'sessionId': 'test-session'}}), flush=True)\n"
+        "    else:\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n",
+        encoding="utf-8",
+    )
+    script.chmod(script.stat().st_mode | 0o111)
+    return script
 
 
 @pytest.mark.asyncio
@@ -20,7 +38,8 @@ async def test_broker_server_handles_status_and_shutdown(tmp_path: Path) -> None
         metadata_path=tmp_path / "test.json",
         log_path=tmp_path / "test.log",
     )
-    server = BrokerServer(paths=paths, cwd=str(tmp_path), name="Test Session")
+    fake_pi = write_fake_pi(tmp_path)
+    server = BrokerServer(paths=paths, cwd=str(tmp_path), name="Test Session", pi_bin=str(fake_pi))
     server_task = asyncio.create_task(server.serve())
 
     try:
@@ -39,6 +58,9 @@ async def test_broker_server_handles_status_and_shutdown(tmp_path: Path) -> None
         assert status["type"] == "status"
         assert status["metadata"]["session_id"] == "test-session"
         assert status["metadata"]["name"] == "Test Session"
+        assert status["metadata"]["pi_ready"] is True
+        assert isinstance(status["metadata"]["pi_pid"], int)
+        assert status["pi"]["last_state"] == {"sessionId": "test-session"}
 
         connection = await transport.connect()
         await connection.send({"type": "shutdown"})

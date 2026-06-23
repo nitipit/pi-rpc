@@ -12,11 +12,13 @@ Implemented so far:
 - a Cyclopts-powered `pi-rpc` command
 - readable `--session-id` validation
 - platform-aware runtime/state paths through `platformdirs`
-- a Unix-socket broker lifecycle skeleton
+- a Unix-socket broker lifecycle
+- a managed `pi --mode rpc --session-id <id>` subprocess behind the broker
+- readiness handshake through Pi RPC `get_state`
 - schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
 
-Live Pi RPC subprocess management is planned for later versions.
+Prompt forwarding and event streaming are planned for later versions.
 
 ## First commands
 

@@ -40,7 +40,9 @@ def _broker_status_human(data: dict[str, object]) -> None:
         return
     print(f"Session: {metadata.get('session_id')}")
     print("Status:  running")
-    print(f"PID:     {metadata.get('broker_pid')}")
+    print(f"Broker:  {metadata.get('broker_pid')}")
+    print(f"Pi PID:  {metadata.get('pi_pid')}")
+    print(f"Ready:   {metadata.get('pi_ready')}")
     print(f"Socket:  {metadata.get('socket_path')}")
     print(f"State:   {metadata.get('metadata_path')}")
     print(f"Log:     {metadata.get('log_path')}")
@@ -120,6 +122,7 @@ def start(
     session_id: str,
     name: str | None = None,
     cwd: str | None = None,
+    pi_bin: str = "pi",
     output: OutputFormat = "human",
 ) -> None:
     """Start the local broker for a Pi RPC session.
@@ -132,12 +135,14 @@ def start(
         Optional friendly display name to record in broker metadata.
     cwd
         Working directory to associate with the session broker.
+    pi_bin
+        Pi executable to start in RPC mode.
     output
         Output format: human or json.
     """
 
     try:
-        result = start_broker(session_id, cwd=cwd, name=name)
+        result = start_broker(session_id, cwd=cwd, name=name, pi_bin=pi_bin)
     except SessionIdError as exc:
         _exit_invalid_session(exc)
     except BrokerStartError as exc:
