@@ -62,7 +62,7 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "    if payload.get('type') == 'get_state':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_state', 'success': True, 'data': {'sessionId': 'test-session', 'status': 'running'}}), flush=True)\n"
         "    elif payload.get('type') == 'get_available_models':\n"
-        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_available_models', 'success': True, 'data': ['gpt-4', 'claude'] }), flush=True)\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_available_models', 'success': True, 'data': {'models': [{'provider': 'openai', 'id': 'gpt-4'}, {'provider': 'anthropic', 'id': 'claude'}]}}), flush=True)\n"
         "    elif payload.get('type') == 'get_session_stats':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_session_stats', 'success': True, 'data': {'messages': 3, 'tools': 2}}), flush=True)\n"
         "    elif payload.get('type') == 'get_messages':\n"
@@ -72,13 +72,14 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "    elif payload.get('type') == 'get_commands':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_commands', 'success': True, 'data': [{'name': 'echo', 'description': 'repeat input', 'source': 'builtin'}, {'name': 'run', 'description': 'run shell', 'source': 'plugin'}]}), flush=True)\n"
         "    elif payload.get('type') == 'set_model':\n"
-        "        model = payload.get('model')\n"
-        "        if isinstance(model, str):\n"
-        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_model', 'success': True, 'data': {'model': model}}), flush=True)\n"
+        "        provider = payload.get('provider')\n"
+        "        model_id = payload.get('modelId')\n"
+        "        if isinstance(provider, str) and isinstance(model_id, str):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_model', 'success': True, 'data': {'provider': provider, 'id': model_id}}), flush=True)\n"
         "        else:\n"
-        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing model'}), flush=True)\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing provider/modelId'}), flush=True)\n"
         "    elif payload.get('type') == 'cycle_model':\n"
-        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'cycle_model', 'success': True, 'data': {'model': 'gpt-4'}}), flush=True)\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'cycle_model', 'success': True, 'data': {'model': {'provider': 'openai', 'id': 'gpt-4'}}}), flush=True)\n"
         "    elif payload.get('type') == 'set_thinking_level':\n"
         "        level = payload.get('level')\n"
         "        if isinstance(level, str):\n"
@@ -87,6 +88,43 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing level'}), flush=True)\n"
         "    elif payload.get('type') == 'cycle_thinking_level':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'cycle_thinking_level', 'success': True, 'data': {'level': 'high'}}), flush=True)\n"
+        "    elif payload.get('type') == 'set_session_name':\n"
+        "        session_name = payload.get('name')\n"
+        "        if isinstance(session_name, str):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_session_name', 'success': True, 'data': {'name': session_name}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing name'}), flush=True)\n"
+        "    elif payload.get('type') == 'compact':\n"
+        "        response = {'id': payload.get('id'), 'type': 'response', 'command': 'compact', 'success': True}\n"
+        "        if 'customInstructions' in payload:\n"
+        "            response['data'] = {'customInstructions': payload.get('customInstructions')}\n"
+        "        print(json.dumps(response), flush=True)\n"
+        "    elif payload.get('type') == 'set_auto_compaction':\n"
+        "        enabled = payload.get('enabled')\n"
+        "        if isinstance(enabled, bool):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_auto_compaction', 'success': True, 'data': {'enabled': enabled}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing enabled flag'}), flush=True)\n"
+        "    elif payload.get('type') == 'set_auto_retry':\n"
+        "        enabled = payload.get('enabled')\n"
+        "        if isinstance(enabled, bool):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_auto_retry', 'success': True, 'data': {'enabled': enabled}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing enabled flag'}), flush=True)\n"
+        "    elif payload.get('type') == 'set_steering_mode':\n"
+        "        steering_mode = payload.get('mode')\n"
+        "        if isinstance(steering_mode, str):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_steering_mode', 'success': True, 'data': {'mode': steering_mode}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing mode'}), flush=True)\n"
+        "    elif payload.get('type') == 'set_follow_up_mode':\n"
+        "        follow_mode = payload.get('mode')\n"
+        "        if isinstance(follow_mode, str):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_follow_up_mode', 'success': True, 'data': {'mode': follow_mode}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing mode'}), flush=True)\n"
+        "    elif payload.get('type') == 'abort_retry':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'abort_retry', 'success': True, 'data': {'aborted': True}}), flush=True)\n"
         "    elif payload.get('type') in ('steer', 'follow_up', 'abort'):\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n"
         "        print(json.dumps({'type': 'agent_end', 'messages': []}), flush=True)\n"
@@ -268,7 +306,7 @@ async def test_broker_server_forwards_control_commands_without_event_streaming(
     "broker_command, pi_command, data_key",
     [
         ("state", "get_state", "sessionId"),
-        ("models", "get_available_models", "gpt-4"),
+        ("models", "get_available_models", "models"),
         ("stats", "get_session_stats", "messages"),
         ("messages", "get_messages", "role"),
         ("last-assistant-text", "get_last_assistant_text", "text"),
@@ -341,10 +379,17 @@ async def test_broker_server_maps_read_only_commands_to_pi_commands(
 @pytest.mark.parametrize(
     "broker_request, pi_command, data_key",
     [
-        ({"type": "model", "model": "gpt-4"}, "set_model", "model"),
+        ({"type": "model", "provider": "openai", "modelId": "gpt-4"}, "set_model", "provider"),
         ({"type": "cycle-model"}, "cycle_model", "model"),
         ({"type": "thinking", "level": "high"}, "set_thinking_level", "level"),
         ({"type": "cycle-thinking"}, "cycle_thinking_level", "level"),
+        ({"type": "name", "name": "Renamed"}, "set_session_name", "name"),
+        ({"type": "compact", "customInstructions": "short"}, "compact", "customInstructions"),
+        ({"type": "auto-compaction", "enabled": False}, "set_auto_compaction", "enabled"),
+        ({"type": "auto-retry", "enabled": True}, "set_auto_retry", "enabled"),
+        ({"type": "steering-mode", "mode": "all"}, "set_steering_mode", "mode"),
+        ({"type": "follow-up-mode", "mode": "one-at-a-time"}, "set_follow_up_mode", "mode"),
+        ({"type": "abort-retry"}, "abort_retry", "aborted"),
     ],
 )
 async def test_broker_server_maps_mutation_commands_to_pi_commands(

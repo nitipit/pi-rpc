@@ -19,6 +19,7 @@ Implemented so far:
 - foreground event streaming until `agent_end`
 - run-control pass-through for `steer`, `follow_up`, and `abort`
 - model and thinking controls via `model`, `cycle-model`, `thinking`, `cycle-thinking`
+- session behavior controls via `name`, `compact`, queue modes, retry, and auto-compaction
 - read-only visibility for `state`, `models`, `stats`, `messages`,
   `last-assistant-text`, and `commands`.
 - human output from assistant text deltas and JSONL output for tools
@@ -30,6 +31,8 @@ Model/thinking controls are now available via `model`, `cycle-model`,
 `thinking`, and `cycle-thinking`.
 Read-only visibility remains via `state`, `models`, `stats`, `messages`,
 `last-assistant-text`, and `commands`.
+Session behavior controls are available via `name`, `compact`, `auto-compaction`,
+`auto-retry`, `steering-mode`, `follow-up-mode`, and `abort-retry`.
 Richer extension UI handling is planned for later versions.
 
 ## First commands
@@ -50,6 +53,13 @@ uv run pi-rpc model --session-id pi-rpc-dev gpt-4
 uv run pi-rpc cycle-model --session-id pi-rpc-dev
 uv run pi-rpc thinking --session-id pi-rpc-dev high
 uv run pi-rpc cycle-thinking --session-id pi-rpc-dev
+uv run pi-rpc name --session-id pi-rpc-dev "Build pi-rpc"
+uv run pi-rpc compact --session-id pi-rpc-dev --instructions "Focus on implementation decisions"
+uv run pi-rpc auto-compaction --session-id pi-rpc-dev on
+uv run pi-rpc auto-retry --session-id pi-rpc-dev on
+uv run pi-rpc steering-mode --session-id pi-rpc-dev one-at-a-time
+uv run pi-rpc follow-up-mode --session-id pi-rpc-dev all
+uv run pi-rpc abort-retry --session-id pi-rpc-dev
 uv run pi-rpc steer --session-id pi-rpc-dev --message "Adjust the implementation"
 uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests"
 uv run pi-rpc abort --session-id pi-rpc-dev

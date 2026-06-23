@@ -20,6 +20,10 @@ from pi_rpc.transport.protocol import JsonObject
 
 THINKING_LEVELS = ("off", "minimal", "low", "medium", "high", "xhigh")
 ThinkingLevel = Literal["off", "minimal", "low", "medium", "high", "xhigh"]
+AUTO_MODES = ("on", "off")
+AutoMode = Literal["on", "off"]
+SESSION_MODES = ("all", "one-at-a-time")
+SteeringMode = Literal["all", "one-at-a-time"]
 
 PI_READ_ONLY_COMMANDS = {
     "state": "get_state",
@@ -204,9 +208,17 @@ async def _run_model_command(
     """Resolve and set the active model."""
 
     resolved_model = await _resolve_model_for_session(session_id=session_id, requested_model=model)
+    model_request: JsonObject = {"type": "model"}
+    if "/" in resolved_model:
+        provider, model_id = resolved_model.split("/", 1)
+        model_request["provider"] = provider
+        model_request["modelId"] = model_id
+    else:
+        model_request["model"] = resolved_model
+
     await _run_control_request(
         session_id=session_id,
-        request={"type": "model", "model": resolved_model},
+        request=model_request,
         expected_command="set_model",
         output=output,
         command_label="model",
@@ -229,6 +241,137 @@ async def _run_thinking_command(
         output=output,
         command_label="thinking",
         response_printer=lambda response: _print_thinking_level_summary(response, level),
+    )
+
+
+async def _run_name_command(
+    *,
+    session_id: str,
+    name: str,
+    output: OutputFormat,
+) -> None:
+    """Rename the active session for later UI and traceability."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "name", "name": name},
+        expected_command="set_session_name",
+        output=output,
+        command_label="name",
+        response_printer=lambda response: _print_name_summary(response, name),
+    )
+
+
+async def _run_compact_command(
+    *,
+    session_id: str,
+    instructions: str | None,
+    output: OutputFormat,
+) -> None:
+    """Request compaction, optionally with custom instructions."""
+
+    request: JsonObject = {"type": "compact"}
+    if instructions is not None:
+        request["customInstructions"] = instructions
+
+    await _run_control_request(
+        session_id=session_id,
+        request=request,
+        expected_command="compact",
+        output=output,
+        command_label="compact",
+        response_printer=lambda response: _print_compact_summary(response, instructions),
+    )
+
+
+async def _run_auto_compaction_command(
+    *,
+    session_id: str,
+    auto: AutoMode,
+    output: OutputFormat,
+) -> None:
+    """Set automatic compaction enabled state."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "auto-compaction", "enabled": auto == "on"},
+        expected_command="set_auto_compaction",
+        output=output,
+        command_label="auto-compaction",
+        response_printer=lambda response: _print_auto_state_summary(
+            response, "auto-compaction", auto
+        ),
+    )
+
+
+async def _run_auto_retry_command(
+    *,
+    session_id: str,
+    auto: AutoMode,
+    output: OutputFormat,
+) -> None:
+    """Set automatic retry enabled state."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "auto-retry", "enabled": auto == "on"},
+        expected_command="set_auto_retry",
+        output=output,
+        command_label="auto-retry",
+        response_printer=lambda response: _print_auto_state_summary(response, "auto-retry", auto),
+    )
+
+
+async def _run_steering_mode_command(
+    *,
+    session_id: str,
+    mode: SteeringMode,
+    output: OutputFormat,
+) -> None:
+    """Set steering mode behavior."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "steering-mode", "mode": mode},
+        expected_command="set_steering_mode",
+        output=output,
+        command_label="steering-mode",
+        response_printer=lambda response: _print_mode_summary(response, "steering-mode", mode),
+    )
+
+
+async def _run_follow_up_mode_command(
+    *,
+    session_id: str,
+    mode: SteeringMode,
+    output: OutputFormat,
+) -> None:
+    """Set follow-up mode behavior."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "follow-up-mode", "mode": mode},
+        expected_command="set_follow_up_mode",
+        output=output,
+        command_label="follow-up-mode",
+        response_printer=lambda response: _print_mode_summary(response, "follow-up-mode", mode),
+    )
+
+
+async def _run_abort_retry_command(
+    *,
+    session_id: str,
+    output: OutputFormat,
+) -> None:
+    """Abort a retry loop, if active."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "abort-retry"},
+        expected_command="abort_retry",
+        output=output,
+        command_label="abort-retry",
+        response_printer=_print_abort_retry_summary,
     )
 
 
@@ -423,20 +566,21 @@ def _print_commands_summary(data: object) -> None:
 
 def _print_model_summary(response: JsonObject, resolved_model: str) -> None:
     data = response.get("data")
-    model = resolved_model
+    model = _model_ref(data) or resolved_model
     if isinstance(data, dict):
-        maybe_model = data.get("model")
-        if isinstance(maybe_model, str):
-            model = maybe_model
+        nested_model = data.get("model")
+        model = _model_ref(nested_model) or model
 
     print(f"  model: {model}")
 
 
 def _print_cycle_model_summary(response: JsonObject) -> None:
     data = response.get("data")
-    if isinstance(data, dict) and isinstance(data.get("model"), str):
-        print(f"  model: {data['model']}")
-        return
+    if isinstance(data, dict):
+        model = _model_ref(data.get("model"))
+        if model is not None:
+            print(f"  model: {model}")
+            return
 
     print("  model cycle: done")
 
@@ -459,6 +603,58 @@ def _print_cycle_thinking_summary(response: JsonObject) -> None:
         return
 
     print("  thinking cycle: done")
+
+
+def _print_name_summary(response: JsonObject, fallback: str) -> None:
+    data = response.get("data")
+    name = fallback
+    if isinstance(data, dict):
+        maybe_name = data.get("name")
+        if isinstance(maybe_name, str):
+            name = maybe_name
+    print(f"  name: {name}")
+
+
+def _print_compact_summary(response: JsonObject, instructions: str | None) -> None:
+    data = response.get("data")
+    if instructions is None:
+        print("  compact: triggered")
+        return
+
+    if isinstance(data, dict) and isinstance(data.get("customInstructions"), str):
+        instructions = cast("str", data.get("customInstructions"))
+
+    preview = (instructions[:50] + "…") if len(instructions) > 50 else instructions
+    print(f"  compact: custom instructions set ({len(instructions)} chars)")
+    print(f"  instructions: {preview}")
+
+
+def _print_auto_state_summary(response: JsonObject, label: str, auto: AutoMode) -> None:
+    data = response.get("data")
+    state = auto
+    if isinstance(data, dict) and isinstance(data.get("enabled"), bool):
+        state = "on" if data.get("enabled") else "off"
+    print(f"  {label}: {state}")
+
+
+def _print_mode_summary(response: JsonObject, label: str, mode: SteeringMode) -> None:
+    data = response.get("data")
+    value = mode
+    if isinstance(data, dict) and isinstance(data.get("mode"), str):
+        value = str(data.get("mode"))
+    print(f"  {label}: {value}")
+
+
+def _print_abort_retry_summary(response: JsonObject) -> None:
+    data = response.get("data")
+    if isinstance(data, dict) and isinstance(data.get("aborted"), bool):
+        if data.get("aborted"):
+            print("  abort-retry: aborted")
+        else:
+            print("  abort-retry: nothing to abort")
+        return
+
+    print("  abort-retry: sent")
 
 
 async def _run_command_and_print(
@@ -904,6 +1100,219 @@ def cycle_thinking(*, session_id: str, output: OutputFormat = "human") -> None:
                 response_printer=_print_cycle_thinking_summary,
             )
         )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="name")
+def set_session_name(
+    name: str,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Set the active session name.
+
+    Parameters
+    ----------
+    name
+        New session name.
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_name_command(session_id=session_id, name=name, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def compact(
+    *,
+    session_id: str,
+    instructions: str | None = None,
+    output: OutputFormat = "human",
+) -> None:
+    """Trigger conversation compaction with optional custom instructions.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    instructions
+        Optional custom instructions to guide compaction.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_compact_command(session_id=session_id, instructions=instructions, output=output)
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="auto-compaction")
+def auto_compaction(
+    mode: AutoMode,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Enable or disable automatic compaction.
+
+    Parameters
+    ----------
+    mode
+        "on" to enable, "off" to disable.
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    if mode not in AUTO_MODES:
+        print(f"Invalid auto-compaction mode: {mode}", file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        asyncio.run(
+            _run_auto_compaction_command(
+                session_id=session_id,
+                auto=mode,
+                output=output,
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="auto-retry")
+def auto_retry(
+    mode: AutoMode,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Enable or disable automatic retries.
+
+    Parameters
+    ----------
+    mode
+        "on" to enable, "off" to disable.
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    if mode not in AUTO_MODES:
+        print(f"Invalid auto-retry mode: {mode}", file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        asyncio.run(_run_auto_retry_command(session_id=session_id, auto=mode, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="steering-mode")
+def steering_mode(
+    mode: SteeringMode,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Set steering behavior mode.
+
+    Parameters
+    ----------
+    mode
+        "all" or "one-at-a-time".
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    if mode not in SESSION_MODES:
+        print(f"Invalid steering mode: {mode}", file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        asyncio.run(_run_steering_mode_command(session_id=session_id, mode=mode, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="follow-up-mode")
+def follow_up_mode(
+    mode: SteeringMode,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Set follow-up message behavior mode.
+
+    Parameters
+    ----------
+    mode
+        "all" or "one-at-a-time".
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    if mode not in SESSION_MODES:
+        print(f"Invalid follow-up mode: {mode}", file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        asyncio.run(_run_follow_up_mode_command(session_id=session_id, mode=mode, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="abort-retry")
+def abort_retry(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Abort automatic retrying behavior for the session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_abort_retry_command(session_id=session_id, output=output))
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

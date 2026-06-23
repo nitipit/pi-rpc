@@ -25,6 +25,13 @@ from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
         "cycle-model",
         "thinking",
         "cycle-thinking",
+        "name",
+        "compact",
+        "auto-compaction",
+        "auto-retry",
+        "steering-mode",
+        "follow-up-mode",
+        "abort-retry",
     ],
 )
 def test_validate_broker_request_accepts_known_types(request_type: str) -> None:
@@ -62,3 +69,18 @@ def test_validate_broker_request_accepts_pass_through_payloads() -> None:
     assert validate_broker_request({"type": "cycle-model"}) == "cycle-model"
     assert validate_broker_request({"type": "thinking"}) == "thinking"
     assert validate_broker_request({"type": "cycle-thinking"}) == "cycle-thinking"
+    assert validate_broker_request({"type": "name", "name": "New name"}) == "name"
+    assert (
+        validate_broker_request({"type": "compact", "customInstructions": "compress now"})
+        == "compact"
+    )
+    assert (
+        validate_broker_request({"type": "auto-compaction", "enabled": False}) == "auto-compaction"
+    )
+    assert validate_broker_request({"type": "auto-retry", "enabled": True}) == "auto-retry"
+    assert validate_broker_request({"type": "steering-mode", "mode": "all"}) == "steering-mode"
+    assert (
+        validate_broker_request({"type": "follow-up-mode", "mode": "one-at-a-time"})
+        == "follow-up-mode"
+    )
+    assert validate_broker_request({"type": "abort-retry"}) == "abort-retry"

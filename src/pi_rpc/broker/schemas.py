@@ -24,6 +24,13 @@ BrokerRequestType = Literal[
     "cycle-model",
     "thinking",
     "cycle-thinking",
+    "name",
+    "compact",
+    "auto-compaction",
+    "auto-retry",
+    "steering-mode",
+    "follow-up-mode",
+    "abort-retry",
 ]
 BROKER_REQUEST_TYPES = {
     "ping",
@@ -43,6 +50,13 @@ BROKER_REQUEST_TYPES = {
     "cycle-model",
     "thinking",
     "cycle-thinking",
+    "name",
+    "compact",
+    "auto-compaction",
+    "auto-retry",
+    "steering-mode",
+    "follow-up-mode",
+    "abort-retry",
 }
 PASS_THROUGH_REQUEST_TYPES = {
     "prompt",
@@ -59,6 +73,13 @@ PASS_THROUGH_REQUEST_TYPES = {
     "cycle-model",
     "thinking",
     "cycle-thinking",
+    "name",
+    "compact",
+    "auto-compaction",
+    "auto-retry",
+    "steering-mode",
+    "follow-up-mode",
+    "abort-retry",
 }
 
 

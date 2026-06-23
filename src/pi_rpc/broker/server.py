@@ -28,6 +28,13 @@ _BROKER_TO_PI_COMMAND = {
     "cycle-model": "cycle_model",
     "thinking": "set_thinking_level",
     "cycle-thinking": "cycle_thinking_level",
+    "name": "set_session_name",
+    "compact": "compact",
+    "auto-compaction": "set_auto_compaction",
+    "auto-retry": "set_auto_retry",
+    "steering-mode": "set_steering_mode",
+    "follow-up-mode": "set_follow_up_mode",
+    "abort-retry": "abort_retry",
 }
 
 
