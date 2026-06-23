@@ -36,8 +36,13 @@ overhead.
 
 Keep delegated tasks bounded and token-efficient. Prefer specialist roles for
 product judgment, protocol review, implementation-heavy work, fresh quality
-review, docs/packaging, release stop/continue decisions, and other clearly
-scoped responsibilities.
+review, docs/packaging, and other clearly scoped responsibilities.
+
+Use the `release-decider` role as a loop gate, not as routine per-version
+review. Invoke it when the default agent believes active work may be complete,
+when continued work may be low-value, or when deciding whether to stop or keep
+implementing further. The release-decider should return `stop`, `continue`, or
+`replan` against `goal/main.md` without asking the user by default.
 
 For stateful role sessions, do not repeatedly resend the full initial role
 prompt or unchanged context. Reuse the session's valid context and send only new

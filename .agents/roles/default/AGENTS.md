@@ -21,8 +21,11 @@ Before substantial work, read or refresh:
 - Prefer discussion before changing product behavior, architecture, workflow,
   role structure, or public command names.
 - Use repo-local roles when they materially improve product judgment,
-  implementation quality, protocol coverage, documentation, validation, or
-  release stop/continue decisions.
+  implementation quality, protocol coverage, documentation, or validation.
+- Use `release-decider` as a loop gate, not routine per-version review. Invoke
+  it when you believe active work may be complete, continued work may be
+  low-value, or the project needs a stop/continue/replan decision against
+  `goal/main.md`.
 - For stateful role sessions, reuse valid context. Do not repeatedly resend the
   full initial prompt or unchanged role context; send only new facts, changed
   facts, task constraints, and expected output. If context validity is unclear,
