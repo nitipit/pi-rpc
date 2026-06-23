@@ -21,6 +21,10 @@ from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
         "messages",
         "last-assistant-text",
         "commands",
+        "model",
+        "cycle-model",
+        "thinking",
+        "cycle-thinking",
     ],
 )
 def test_validate_broker_request_accepts_known_types(request_type: str) -> None:
@@ -54,3 +58,7 @@ def test_validate_broker_request_accepts_pass_through_payloads() -> None:
     assert validate_broker_request({"type": "messages"}) == "messages"
     assert validate_broker_request({"type": "last-assistant-text"}) == "last-assistant-text"
     assert validate_broker_request({"type": "commands"}) == "commands"
+    assert validate_broker_request({"type": "model"}) == "model"
+    assert validate_broker_request({"type": "cycle-model"}) == "cycle-model"
+    assert validate_broker_request({"type": "thinking"}) == "thinking"
+    assert validate_broker_request({"type": "cycle-thinking"}) == "cycle-thinking"

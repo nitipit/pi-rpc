@@ -71,6 +71,22 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_last_assistant_text', 'success': True, 'data': {'text': 'previous assistant output'}}), flush=True)\n"
         "    elif payload.get('type') == 'get_commands':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_commands', 'success': True, 'data': [{'name': 'echo', 'description': 'repeat input', 'source': 'builtin'}, {'name': 'run', 'description': 'run shell', 'source': 'plugin'}]}), flush=True)\n"
+        "    elif payload.get('type') == 'set_model':\n"
+        "        model = payload.get('model')\n"
+        "        if isinstance(model, str):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_model', 'success': True, 'data': {'model': model}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing model'}), flush=True)\n"
+        "    elif payload.get('type') == 'cycle_model':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'cycle_model', 'success': True, 'data': {'model': 'gpt-4'}}), flush=True)\n"
+        "    elif payload.get('type') == 'set_thinking_level':\n"
+        "        level = payload.get('level')\n"
+        "        if isinstance(level, str):\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'set_thinking_level', 'success': True, 'data': {'level': level}}), flush=True)\n"
+        "        else:\n"
+        "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing level'}), flush=True)\n"
+        "    elif payload.get('type') == 'cycle_thinking_level':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'cycle_thinking_level', 'success': True, 'data': {'level': 'high'}}), flush=True)\n"
         "    elif payload.get('type') in ('steer', 'follow_up', 'abort'):\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n"
         "        print(json.dumps({'type': 'agent_end', 'messages': []}), flush=True)\n"
@@ -307,6 +323,70 @@ async def test_broker_server_maps_read_only_commands_to_pi_commands(
                 assert data_key in response_data
         else:
             raise AssertionError("Expected list or dict data")
+
+        shutdown_connection = await transport.connect()
+        await shutdown_connection.send({"type": "shutdown"})
+        await anext(shutdown_connection.receive())
+        await shutdown_connection.close()
+
+        await asyncio.wait_for(server_task, timeout=1)
+    finally:
+        if not server_task.done():
+            server_task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await server_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "broker_request, pi_command, data_key",
+    [
+        ({"type": "model", "model": "gpt-4"}, "set_model", "model"),
+        ({"type": "cycle-model"}, "cycle_model", "model"),
+        ({"type": "thinking", "level": "high"}, "set_thinking_level", "level"),
+        ({"type": "cycle-thinking"}, "cycle_thinking_level", "level"),
+    ],
+)
+async def test_broker_server_maps_mutation_commands_to_pi_commands(
+    tmp_path: Path,
+    broker_request: dict[str, str],
+    pi_command: str,
+    data_key: str,
+) -> None:
+    paths = SessionPaths(
+        session_id="test-session",
+        file_stem="test-session-abc123",
+        socket_path=tmp_path / "test.sock",
+        pid_path=tmp_path / "test.pid",
+        metadata_path=tmp_path / "test.json",
+        log_path=tmp_path / "test.log",
+    )
+    fake_pi = write_fake_pi_with_control_command_events(tmp_path)
+    server = BrokerServer(paths=paths, cwd=str(tmp_path), name="Test Session", pi_bin=str(fake_pi))
+    server_task = asyncio.create_task(server.serve())
+
+    try:
+        transport = UnixBrokerTransport(paths.socket_path)
+        for _ in range(100):
+            if paths.socket_path.exists():
+                break
+            await asyncio.sleep(0.01)
+
+        connection = await transport.connect()
+        await connection.send(broker_request)
+        responses: list[dict[str, object]] = []
+        async for response in connection.receive():
+            responses.append(response)
+        await connection.close()
+
+        assert len(responses) == 1
+        assert responses[0]["type"] == "response"
+        assert responses[0]["command"] == pi_command
+        assert responses[0]["success"] is True
+        response_data = responses[0]["data"]
+        if not isinstance(response_data, dict):
+            raise AssertionError("Expected dict data")
+        assert data_key in response_data
 
         shutdown_connection = await transport.connect()
         await shutdown_connection.send({"type": "shutdown"})

@@ -6,7 +6,7 @@ import asyncio
 import json
 import sys
 from collections.abc import Callable
-from typing import NoReturn, cast
+from typing import Literal, NoReturn, cast
 
 from cyclopts import App
 
@@ -17,6 +17,9 @@ from pi_rpc.paths import known_metadata_paths, paths_for_session
 from pi_rpc.session_id import SessionIdError, session_identity
 from pi_rpc.status import inspect_session
 from pi_rpc.transport.protocol import JsonObject
+
+THINKING_LEVELS = ("off", "minimal", "low", "medium", "high", "xhigh")
+ThinkingLevel = Literal["off", "minimal", "low", "medium", "high", "xhigh"]
 
 PI_READ_ONLY_COMMANDS = {
     "state": "get_state",
@@ -143,12 +146,33 @@ async def _run_control_command(
     if message is not None:
         request["message"] = message
 
-    await _run_command_and_print(
+    await _run_control_request(
         session_id=session_id,
         request=request,
         expected_command=command,
         output=output,
         command_label=command.replace("_", "-"),
+    )
+
+
+async def _run_control_request(
+    *,
+    session_id: str,
+    request: JsonObject,
+    expected_command: str,
+    output: OutputFormat,
+    command_label: str | None = None,
+    response_printer: Callable[[JsonObject], None] | None = None,
+) -> None:
+    """Send a mapped Pi control command and print output according to format."""
+
+    await _run_command_and_print(
+        session_id=session_id,
+        request=request,
+        expected_command=expected_command,
+        output=output,
+        command_label=command_label,
+        response_printer=response_printer,
     )
 
 
@@ -171,6 +195,120 @@ async def _run_read_only_command(
     )
 
 
+async def _run_model_command(
+    *,
+    session_id: str,
+    model: str,
+    output: OutputFormat,
+) -> None:
+    """Resolve and set the active model."""
+
+    resolved_model = await _resolve_model_for_session(session_id=session_id, requested_model=model)
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "model", "model": resolved_model},
+        expected_command="set_model",
+        output=output,
+        command_label="model",
+        response_printer=lambda response: _print_model_summary(response, resolved_model),
+    )
+
+
+async def _run_thinking_command(
+    *,
+    session_id: str,
+    level: ThinkingLevel,
+    output: OutputFormat,
+) -> None:
+    """Set the thinking level for the session."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "thinking", "level": level},
+        expected_command="set_thinking_level",
+        output=output,
+        command_label="thinking",
+        response_printer=lambda response: _print_thinking_level_summary(response, level),
+    )
+
+
+def _model_ref(model: object) -> str | None:
+    """Return a provider/id reference from a Pi model object or string."""
+
+    if isinstance(model, str):
+        return model
+    if not isinstance(model, dict):
+        return None
+
+    provider = model.get("provider")
+    model_id = model.get("id")
+    if isinstance(provider, str) and isinstance(model_id, str):
+        return f"{provider}/{model_id}"
+    if isinstance(model_id, str):
+        return model_id
+    return None
+
+
+def _extract_model_refs(data: object) -> list[str]:
+    """Extract model references from Pi get_available_models response data."""
+
+    models = data.get("models") if isinstance(data, dict) else data
+    if not isinstance(models, list):
+        return []
+    return [model_ref for model in models if (model_ref := _model_ref(model)) is not None]
+
+
+def _resolve_model_from_available_models(
+    *,
+    available: list[str],
+    requested_model: str,
+) -> str:
+    """Resolve a model token from available model names."""
+
+    if requested_model in available:
+        return requested_model
+
+    if "/" in requested_model:
+        msg = f"Unknown model '{requested_model}'."
+        raise ValueError(msg)
+
+    matching_models = [model for model in available if model.split("/")[-1] == requested_model]
+    if not matching_models:
+        msg = f"Unknown model '{requested_model}'."
+        raise ValueError(msg)
+    if len(matching_models) > 1:
+        joined = ", ".join(matching_models)
+        msg = f"Ambiguous model '{requested_model}': {joined}"
+        raise ValueError(msg)
+    return matching_models[0]
+
+
+async def _resolve_model_for_session(
+    *,
+    session_id: str,
+    requested_model: str,
+) -> str:
+    """Load available models from broker and resolve the requested model."""
+
+    response = await request_broker(session_id, {"type": "models"})
+    if (
+        response.get("type") != "response"
+        or response.get("command") != "get_available_models"
+        or response.get("success") is not True
+    ):
+        msg = "Could not load available models before setting model."
+        raise RuntimeError(msg)
+
+    available_models = _extract_model_refs(response.get("data"))
+    if not available_models:
+        msg = "Invalid response format from models command."
+        raise RuntimeError(msg)
+
+    return _resolve_model_from_available_models(
+        available=available_models, requested_model=requested_model
+    )
+
+
 def _print_command_summary(command: str, response: JsonObject) -> None:
     """Print a compact human-readable summary for read-only responses."""
 
@@ -189,11 +327,13 @@ def _print_command_summary(command: str, response: JsonObject) -> None:
         _print_commands_summary(data)
         return
 
-    if command == "models" and isinstance(data, list):
-        print(f"  models: {len(data)} available")
-        for model in data:
-            print(f"  - {model}")
-        return
+    if command == "models":
+        models = _extract_model_refs(data)
+        if models:
+            print(f"  models: {len(models)} available")
+            for model in models:
+                print(f"  - {model}")
+            return
 
     if isinstance(data, dict):
         for key, value in data.items():
@@ -279,6 +419,46 @@ def _print_commands_summary(data: object) -> None:
         if description:
             line = f"{line}: {description}"
         print(line)
+
+
+def _print_model_summary(response: JsonObject, resolved_model: str) -> None:
+    data = response.get("data")
+    model = resolved_model
+    if isinstance(data, dict):
+        maybe_model = data.get("model")
+        if isinstance(maybe_model, str):
+            model = maybe_model
+
+    print(f"  model: {model}")
+
+
+def _print_cycle_model_summary(response: JsonObject) -> None:
+    data = response.get("data")
+    if isinstance(data, dict) and isinstance(data.get("model"), str):
+        print(f"  model: {data['model']}")
+        return
+
+    print("  model cycle: done")
+
+
+def _print_thinking_level_summary(response: JsonObject, level: str) -> None:
+    data = response.get("data")
+    resolved = level
+    if isinstance(data, dict):
+        maybe_level = data.get("level")
+        if isinstance(maybe_level, str):
+            resolved = maybe_level
+
+    print(f"  thinking: {resolved}")
+
+
+def _print_cycle_thinking_summary(response: JsonObject) -> None:
+    data = response.get("data")
+    if isinstance(data, dict) and isinstance(data.get("level"), str):
+        print(f"  thinking: {data['level']}")
+        return
+
+    print("  thinking cycle: done")
 
 
 async def _run_command_and_print(
@@ -597,6 +777,132 @@ def state(*, session_id: str, output: OutputFormat = "human") -> None:
     try:
         asyncio.run(
             _run_read_only_command(session_id=session_id, broker_command="state", output=output)
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def model(
+    model: str,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Set the active model for the running session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    model
+        Desired model (provider/id or unique bare id).
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_model_command(session_id=session_id, model=model, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+    except ValueError as exc:
+        print(f"Model resolution failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except RuntimeError as exc:
+        print(f"Model command failed: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+
+
+@app.command(name="cycle-model")
+def cycle_model(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Rotate through available models for the session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request={"type": "cycle-model"},
+                expected_command="cycle_model",
+                output=output,
+                command_label="cycle-model",
+                response_printer=_print_cycle_model_summary,
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def thinking(
+    level: ThinkingLevel,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Set thinking intensity for the running session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    level
+        Thinking level: off, minimal, low, medium, high, or xhigh.
+    output
+        Output format: human or json.
+    """
+
+    if level not in THINKING_LEVELS:
+        print(f"Invalid thinking level: {level}", file=sys.stderr)
+        raise SystemExit(1)
+
+    try:
+        asyncio.run(_run_thinking_command(session_id=session_id, level=level, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="cycle-thinking")
+def cycle_thinking(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Rotate through thinking levels for the running session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request={"type": "cycle-thinking"},
+                expected_command="cycle_thinking_level",
+                output=output,
+                command_label="cycle-thinking",
+                response_printer=_print_cycle_thinking_summary,
+            )
         )
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)

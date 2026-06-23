@@ -20,6 +20,10 @@ BrokerRequestType = Literal[
     "messages",
     "last-assistant-text",
     "commands",
+    "model",
+    "cycle-model",
+    "thinking",
+    "cycle-thinking",
 ]
 BROKER_REQUEST_TYPES = {
     "ping",
@@ -35,6 +39,10 @@ BROKER_REQUEST_TYPES = {
     "messages",
     "last-assistant-text",
     "commands",
+    "model",
+    "cycle-model",
+    "thinking",
+    "cycle-thinking",
 }
 PASS_THROUGH_REQUEST_TYPES = {
     "prompt",
@@ -47,6 +55,10 @@ PASS_THROUGH_REQUEST_TYPES = {
     "messages",
     "last-assistant-text",
     "commands",
+    "model",
+    "cycle-model",
+    "thinking",
+    "cycle-thinking",
 }
 
 
