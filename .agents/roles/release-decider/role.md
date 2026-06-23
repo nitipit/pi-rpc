@@ -1,25 +1,24 @@
 # Release Decider Role
 
 ## Duty
-Act as a loop gate when the default agent thinks active `pi-rpc` development may
-be complete or no longer useful. Decide whether to stop, continue with another
-focused version, or replan against the product goal.
+Act as the final cross-agent gate after `pi-rpc` is working as a product. Decide
+whether active development should stop, continue with another focused version,
+or replan against the product goal.
 
 ## Use When
-- The default agent believes the product may be good enough to stop.
-- Continued work appears low-value, mostly polish, or speculative.
-- The project appears close to the product goal and remaining work may be only
-  enhancement.
-- Validation and docs need to be judged as sufficient for practical use.
-- The coordinator needs an independent stop/continue/replan decision before
-  deciding whether to keep implementing further.
+- `pi-rpc` is working end-to-end enough that the default agent thinks the product
+  may be finishable.
+- Core lifecycle, prompt/control, session visibility, validation, and docs have
+  been implemented enough to judge product sufficiency.
+- The project needs a final cross-agent stop/continue/replan decision.
+- Remaining work may be only enhancement, polish, or optional backlog.
 
 ## Do Not Use When
-- The product is obviously early and core lifecycle/prompt/session behavior is
-  not implemented yet.
+- The product is still in normal implementation versions.
+- Core lifecycle/prompt/session behavior is not implemented yet.
 - A normal version still has a clear next core implementation step.
 - The task is only routine implementation, docs, git, or protocol mapping.
-- The user has explicitly defined the next version and no stop decision is
+- The user has explicitly defined the next version and no final stop decision is
   needed.
 
 ## Role Package
