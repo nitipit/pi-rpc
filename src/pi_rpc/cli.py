@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from collections.abc import Callable
 from typing import NoReturn
 
 from cyclopts import App
@@ -16,6 +17,12 @@ from pi_rpc.paths import known_metadata_paths, paths_for_session
 from pi_rpc.session_id import SessionIdError, session_identity
 from pi_rpc.status import inspect_session
 from pi_rpc.transport.protocol import JsonObject
+
+PI_READ_ONLY_COMMANDS = {
+    "state": "get_state",
+    "models": "get_available_models",
+    "stats": "get_session_stats",
+}
 
 app = App(help="Remote control for long-running Pi RPC sessions.")
 
@@ -129,15 +136,89 @@ async def _run_control_command(
 ) -> None:
     """Send a Pi runtime control command and handle response semantics."""
 
-    payload: JsonObject = {"type": command}
+    request: JsonObject = {"type": command}
     if message is not None:
-        payload["message"] = message
+        request["message"] = message
 
-    response = await request_broker(session_id, payload)
+    await _run_command_and_print(
+        session_id=session_id,
+        request=request,
+        expected_command=command,
+        output=output,
+        command_label=command.replace("_", "-"),
+    )
+
+
+async def _run_read_only_command(
+    *,
+    session_id: str,
+    broker_command: str,
+    output: OutputFormat,
+) -> None:
+    """Send a read-only mapped Pi command and print a human summary."""
+
+    pi_command = PI_READ_ONLY_COMMANDS[broker_command]
+    await _run_command_and_print(
+        session_id=session_id,
+        request={"type": broker_command},
+        expected_command=pi_command,
+        output=output,
+        command_label=broker_command,
+        response_printer=lambda response: _print_command_summary(broker_command, response),
+    )
+
+
+def _print_command_summary(command: str, response: JsonObject) -> None:
+    """Print a compact human-readable summary for read-only responses."""
+
+    data = response.get("data")
+    print(f"{command.replace('_', ' ').title()} response:")
+    if command == "models" and isinstance(data, list):
+        print(f"  models: {len(data)} available")
+        for model in data:
+            print(f"  - {model}")
+        return
+
+    if isinstance(data, dict):
+        if command == "state" and "sessionId" in data:
+            print(f"  session: {data['sessionId']}")
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                rendered = json.dumps(value, sort_keys=True)
+            else:
+                rendered = str(value)
+            print(f"  {key}: {rendered}")
+        if data:
+            return
+
+    if isinstance(data, list):
+        for item in data:
+            print(f"  - {item}")
+        return
+
+    print(f"  data: {data}")
+
+
+async def _run_command_and_print(
+    *,
+    session_id: str,
+    request: JsonObject,
+    output: OutputFormat,
+    expected_command: str,
+    command_label: str | None = None,
+    response_printer: Callable[[JsonObject], None] | None = None,
+) -> None:
+    """Send one broker/Pi command and print output according to format."""
+
+    response = await request_broker(session_id, request)
 
     if output == "json":
         _print_json_frame(response)
-        if response.get("type") != "response" or response.get("success") is not True:
+        if (
+            response.get("type") != "response"
+            or response.get("command") != expected_command
+            or response.get("success") is not True
+        ):
             raise SystemExit(1)
         return
 
@@ -145,16 +226,21 @@ async def _run_control_command(
         print("Broker did not return a valid response command frame.", file=sys.stderr)
         raise SystemExit(1)
 
-    if response.get("command") != command:
+    if response.get("command") != expected_command:
         print(f"Unexpected command response: {response.get('command')}", file=sys.stderr)
         raise SystemExit(1)
 
     if response.get("success") is not True:
-        error = response.get("error", f"{command} was not accepted")
-        print(f"{command} failed: {error}", file=sys.stderr)
+        label = command_label or expected_command
+        error = response.get("error", f"{label} was not accepted")
+        print(f"{label} failed: {error}", file=sys.stderr)
         raise SystemExit(1)
 
-    print(f"{command.replace('_', '-')} sent")
+    if response_printer is not None:
+        response_printer(response)
+    elif output == "human":
+        label = command_label or expected_command
+        print(f"{label} sent")
 
 
 @app.default
@@ -407,6 +493,75 @@ def abort(*, session_id: str, output: OutputFormat = "human") -> None:
 
     try:
         asyncio.run(_run_control_command(session_id=session_id, command="abort", output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def state(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Show live state from the running Pi session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(session_id=session_id, broker_command="state", output=output)
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def models(*, session_id: str, output: OutputFormat = "human") -> None:
+    """List available Pi models for the running session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(session_id=session_id, broker_command="models", output=output)
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def stats(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Show session statistics.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(session_id=session_id, broker_command="stats", output=output)
+        )
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

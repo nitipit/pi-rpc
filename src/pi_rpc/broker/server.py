@@ -9,9 +9,19 @@ from pathlib import Path
 
 from pi_rpc.broker.metadata import BrokerMetadata, utc_now_iso, write_metadata
 from pi_rpc.broker.pi_process import PiRpcProcess
-from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
+from pi_rpc.broker.schemas import (
+    PASS_THROUGH_REQUEST_TYPES,
+    BrokerSchemaError,
+    validate_broker_request,
+)
 from pi_rpc.paths import SessionPaths
 from pi_rpc.transport.protocol import JsonObject, ProtocolError, decode_jsonl_line, encode_jsonl
+
+_BROKER_TO_PI_COMMAND = {
+    "state": "get_state",
+    "models": "get_available_models",
+    "stats": "get_session_stats",
+}
 
 
 class BrokerServer:
@@ -93,7 +103,7 @@ class BrokerServer:
                 try:
                     request = decode_jsonl_line(line)
                     request_type = validate_broker_request(request)
-                    if request_type in {"prompt", "steer", "follow_up", "abort"}:
+                    if request_type in PASS_THROUGH_REQUEST_TYPES:
                         await self._forward_command(
                             request, writer, stream=request_type == "prompt"
                         )
@@ -128,8 +138,9 @@ class BrokerServer:
         stream: bool,
     ) -> None:
         queue = self.pi_process.subscribe_events() if stream else None
+        forward_request = self._map_broker_to_pi_request(request)
         try:
-            response = await self.pi_process.send_command(request)
+            response = await self.pi_process.send_command(forward_request)
             writer.write(encode_jsonl(response))
             await writer.drain()
 
@@ -147,6 +158,19 @@ class BrokerServer:
         finally:
             if queue is not None:
                 self.pi_process.unsubscribe_events(queue)
+
+    def _map_broker_to_pi_request(self, request: JsonObject) -> JsonObject:
+        request_type = request.get("type")
+        if request_type is None:
+            return request
+
+        pi_request_type = _BROKER_TO_PI_COMMAND.get(request_type, request_type)
+        if request_type == pi_request_type:
+            return request
+
+        mapped = dict(request)
+        mapped["type"] = pi_request_type
+        return mapped
 
     def _should_stream_events(self, response: JsonObject) -> bool:
         return (

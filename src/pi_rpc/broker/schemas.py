@@ -6,9 +6,39 @@ from typing import Annotated, Any, Literal, cast
 
 from dictify import Field, Model
 
-BrokerRequestType = Literal["ping", "status", "shutdown", "prompt", "steer", "follow_up", "abort"]
-BROKER_REQUEST_TYPES = {"ping", "status", "shutdown", "prompt", "steer", "follow_up", "abort"}
-PASS_THROUGH_REQUEST_TYPES = {"prompt", "steer", "follow_up", "abort"}
+BrokerRequestType = Literal[
+    "ping",
+    "status",
+    "shutdown",
+    "prompt",
+    "steer",
+    "follow_up",
+    "abort",
+    "state",
+    "models",
+    "stats",
+]
+BROKER_REQUEST_TYPES = {
+    "ping",
+    "status",
+    "shutdown",
+    "prompt",
+    "steer",
+    "follow_up",
+    "abort",
+    "state",
+    "models",
+    "stats",
+}
+PASS_THROUGH_REQUEST_TYPES = {
+    "prompt",
+    "steer",
+    "follow_up",
+    "abort",
+    "state",
+    "models",
+    "stats",
+}
 
 
 def is_broker_request_type(value: str) -> bool:

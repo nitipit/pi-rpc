@@ -60,7 +60,11 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "for line in sys.stdin:\n"
         "    payload = json.loads(line)\n"
         "    if payload.get('type') == 'get_state':\n"
-        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_state', 'success': True, 'data': {'sessionId': 'test-session'}}), flush=True)\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_state', 'success': True, 'data': {'sessionId': 'test-session', 'status': 'running'}}), flush=True)\n"
+        "    elif payload.get('type') == 'get_available_models':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_available_models', 'success': True, 'data': ['gpt-4', 'claude'] }), flush=True)\n"
+        "    elif payload.get('type') == 'get_session_stats':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_session_stats', 'success': True, 'data': {'messages': 3, 'tools': 2}}), flush=True)\n"
         "    elif payload.get('type') in ('steer', 'follow_up', 'abort'):\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n"
         "        print(json.dumps({'type': 'agent_end', 'messages': []}), flush=True)\n"
@@ -223,6 +227,70 @@ async def test_broker_server_forwards_control_commands_without_event_streaming(
         assert responses[0]["type"] == "response"
         assert responses[0]["command"] == command
         assert responses[0]["success"] is True
+
+        shutdown_connection = await transport.connect()
+        await shutdown_connection.send({"type": "shutdown"})
+        await anext(shutdown_connection.receive())
+        await shutdown_connection.close()
+
+        await asyncio.wait_for(server_task, timeout=1)
+    finally:
+        if not server_task.done():
+            server_task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await server_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "broker_command, pi_command, data_key",
+    [
+        ("state", "get_state", "sessionId"),
+        ("models", "get_available_models", "gpt-4"),
+        ("stats", "get_session_stats", "messages"),
+    ],
+)
+async def test_broker_server_maps_read_only_commands_to_pi_commands(
+    tmp_path: Path,
+    broker_command: str,
+    pi_command: str,
+    data_key: str,
+) -> None:
+    paths = SessionPaths(
+        session_id="test-session",
+        file_stem="test-session-abc123",
+        socket_path=tmp_path / "test.sock",
+        pid_path=tmp_path / "test.pid",
+        metadata_path=tmp_path / "test.json",
+        log_path=tmp_path / "test.log",
+    )
+    fake_pi = write_fake_pi_with_control_command_events(tmp_path)
+    server = BrokerServer(paths=paths, cwd=str(tmp_path), name="Test Session", pi_bin=str(fake_pi))
+    server_task = asyncio.create_task(server.serve())
+
+    try:
+        transport = UnixBrokerTransport(paths.socket_path)
+        for _ in range(100):
+            if paths.socket_path.exists():
+                break
+            await asyncio.sleep(0.01)
+
+        connection = await transport.connect()
+        await connection.send({"type": broker_command})
+        responses: list[dict[str, object]] = []
+        async for response in connection.receive():
+            responses.append(response)
+        await connection.close()
+
+        assert len(responses) == 1
+        assert responses[0]["type"] == "response"
+        assert responses[0]["command"] == pi_command
+        assert responses[0]["success"] is True
+        response_data = responses[0]["data"]
+        if isinstance(response_data, (dict, list)):
+            assert data_key in response_data
+        else:
+            raise AssertionError("Expected list or dict data")
 
         shutdown_connection = await transport.connect()
         await shutdown_connection.send({"type": "shutdown"})

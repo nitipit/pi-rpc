@@ -6,7 +6,19 @@ from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
 
 
 @pytest.mark.parametrize(
-    "request_type", ["ping", "status", "shutdown", "prompt", "steer", "follow_up", "abort"]
+    "request_type",
+    [
+        "ping",
+        "status",
+        "shutdown",
+        "prompt",
+        "steer",
+        "follow_up",
+        "abort",
+        "state",
+        "models",
+        "stats",
+    ],
 )
 def test_validate_broker_request_accepts_known_types(request_type: str) -> None:
     assert validate_broker_request({"type": request_type}) == request_type
@@ -33,3 +45,6 @@ def test_validate_broker_request_accepts_pass_through_payloads() -> None:
     assert validate_broker_request({"type": "steer", "message": "Adjust this"}) == "steer"
     assert validate_broker_request({"type": "follow_up", "message": "Then do that"}) == "follow_up"
     assert validate_broker_request({"type": "abort"}) == "abort"
+    assert validate_broker_request({"type": "state"}) == "state"
+    assert validate_broker_request({"type": "models"}) == "models"
+    assert validate_broker_request({"type": "stats"}) == "stats"
