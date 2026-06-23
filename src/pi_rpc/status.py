@@ -43,7 +43,7 @@ def inspect_session(session_id: str) -> SessionStatusView:
     pid = read_pid_file(str(paths.pid_path))
     if pid is None:
         status = "stopped"
-        note = "No broker pid file exists yet. Broker runtime starts in a later version."
+        note = "Broker is not running. Use `pi-rpc start --session-id ...` to start it."
     elif pid_is_running(pid):
         status = "running"
         note = f"Broker pid {pid} appears to be running."

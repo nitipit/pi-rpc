@@ -18,3 +18,4 @@ discoveries, patterns, problems, and next-step context.
 | `stateful-roles reuse-context check-before-refresh` | 2026-06-23T23:08:29+07:00 |
 | `v0.1 uv-cli session-paths transport-boundary` | 2026-06-23T23:14:41+07:00 |
 | `release-decider stop-continue goal-sufficient` | 2026-06-23T23:17:45+07:00 |
+| `dictify schema-validation skill-installed` | 2026-06-23T23:35:32+07:00 |

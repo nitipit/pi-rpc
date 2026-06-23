@@ -4,25 +4,28 @@
 It is designed to manage and communicate with `pi --mode rpc` processes through
 explicit, readable `--session-id` handles.
 
-## v0.1 status
+## Current status
 
-v0.1 is the project foundation. It provides:
+Implemented so far:
 
 - a Python package managed by `uv`
 - a Cyclopts-powered `pi-rpc` command
 - readable `--session-id` validation
 - platform-aware runtime/state paths through `platformdirs`
-- an initial modular transport boundary for future broker connections
+- a Unix-socket broker lifecycle skeleton
+- schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
 
-The broker and live Pi RPC subprocess management are planned for later versions.
+Live Pi RPC subprocess management is planned for later versions.
 
 ## First commands
 
 ```bash
 uv run pi-rpc validate-session-id --session-id pi-rpc-dev
 uv run pi-rpc paths --session-id pi-rpc-dev
+uv run pi-rpc start --session-id pi-rpc-dev --name "Build pi-rpc"
 uv run pi-rpc status --session-id pi-rpc-dev
+uv run pi-rpc stop --session-id pi-rpc-dev
 uv run pi-rpc sessions
 ```
 

@@ -24,7 +24,9 @@ Before substantial work, read or refresh:
   implementation quality, protocol coverage, documentation, or validation.
 - Do not use `release-decider` during normal implementation versions. Hold it
   until `pi-rpc` is working as a product and the project needs a final
-  cross-agent stop/continue/replan decision against `goal/main.md`.
+  cross-agent stop/continue/replan decision against `goal/main.md`. Continue
+  development until the user says to pause or the final release-decider gate
+  says to pause/stop.
 - For stateful role sessions, reuse valid context. Do not repeatedly resend the
   full initial prompt or unchanged role context; send only new facts, changed
   facts, task constraints, and expected output. If context validity is unclear,

@@ -36,6 +36,18 @@ wheels = [
 ]
 
 [[package]]
+name = "dictify"
+version = "5.0.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cyclopts" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7d/e8/d753b6e8297dbe9523852e6e871c23c310bbd31b7378597d56229a0b3c79/dictify-5.0.2.tar.gz", hash = "sha256:29a41c4eb06a3c08ff71795405b926494261f61646452739e597d781652ee718", size = 17384, upload-time = "2026-06-13T14:17:47.387Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/6f/6c41a8dc761df3104370508d5c8e1f5eaf42b35568a66ac66b5bb087135b/dictify-5.0.2-py3-none-any.whl", hash = "sha256:215c57a98cb2e0ddd6966ed8e2a8f035abcbd2f359aed723cda5e7e3b11686a3", size = 28539, upload-time = "2026-06-13T14:17:48.648Z" },
+]
+
+[[package]]
 name = "docstring-parser"
 version = "0.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -85,10 +97,11 @@ wheels = [
 
 [[package]]
 name = "pi-rpc"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "cyclopts" },
+    { name = "dictify" },
     { name = "platformdirs" },
 ]
 
@@ -103,6 +116,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cyclopts", specifier = ">=4.19.0" },
+    { name = "dictify", specifier = ">=5.0.2" },
     { name = "platformdirs", specifier = ">=4.10.0" },
 ]
 

@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-23T23:13:35+07:00
+updated: 2026-06-23T23:35:32+07:00
 blocked_by: []
 ---
 
@@ -21,9 +21,10 @@ validated, and committed before moving on.
 
 - [x] v0.1 foundation: Python/uv/cyclopts scaffold, session-id basics, path
       helpers, first tests, and project workflow files.
-- [ ] Later versions: broker lifecycle, Unix socket transport, Pi RPC process
-      management, prompt/event streaming, session commands, extension UI,
-      docs, and packaging polish.
+- [x] v0.2 broker lifecycle: start/status/stop a local Unix-socket broker,
+      persist metadata, validate broker control messages with Dictify.
+- [ ] Later versions: Pi RPC process management, prompt/event streaming,
+      session commands, extension UI, docs, and packaging polish.
 
 ## Attachments
 
@@ -42,3 +43,4 @@ modular so Unix socket can later grow into TCP or other transports.
 
 - 2026-06-23T23:00:10+07:00 — Created task card and started v0.1 foundation.
 - 2026-06-23T23:13:35+07:00 — Implemented and validated v0.1 foundation.
+- 2026-06-23T23:35:32+07:00 — Implemented v0.2 broker lifecycle skeleton and Dictify schema validation.
