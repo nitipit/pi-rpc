@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-24T00:00:53+07:00
+updated: 2026-06-24T00:06:25+07:00
 blocked_by: []
 ---
 
@@ -27,7 +27,8 @@ validated, and committed before moving on.
       child, handshakes with `get_state`, reports Pi readiness/status.
 - [x] v0.4 prompt streaming: forward prompt payloads to Pi RPC, stream native
       events until `agent_end`, print text deltas for humans and JSONL for tools.
-- [ ] Later versions: steering/follow-up/abort, session commands, extension UI,
+- [x] v0.5 run-control: steer/follow-up/abort pass-through.
+- [ ] Later versions: richer session commands, extension UI,
       docs, and packaging polish.
 
 ## Attachments
@@ -50,3 +51,4 @@ modular so Unix socket can later grow into TCP or other transports.
 - 2026-06-23T23:35:32+07:00 — Implemented v0.2 broker lifecycle skeleton and Dictify schema validation.
 - 2026-06-23T23:49:10+07:00 — Implemented v0.3 real Pi RPC subprocess startup and readiness handshake.
 - 2026-06-24T00:00:53+07:00 — Delegated v0.4 implementation to python-runtime-engineer and added prompt/event streaming.
+- 2026-06-24T00:06:25+07:00 — Delegated and implemented v0.5 run-control pass-through and CLI surface commands.

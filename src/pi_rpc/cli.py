@@ -9,7 +9,7 @@ from typing import NoReturn
 
 from cyclopts import App
 
-from pi_rpc.client.broker import BrokerUnavailableError, stream_broker
+from pi_rpc.client.broker import BrokerUnavailableError, request_broker, stream_broker
 from pi_rpc.lifecycle import BrokerStartError, broker_status, start_broker, stop_broker
 from pi_rpc.models import OutputFormat, SessionStatusView
 from pi_rpc.paths import known_metadata_paths, paths_for_session
@@ -118,6 +118,43 @@ async def _run_prompt(*, session_id: str, message: str, output: OutputFormat) ->
         raise SystemExit(1)
     if output == "human" and not accepted:
         raise SystemExit(1)
+
+
+async def _run_control_command(
+    *,
+    session_id: str,
+    command: str,
+    output: OutputFormat,
+    message: str | None = None,
+) -> None:
+    """Send a Pi runtime control command and handle response semantics."""
+
+    payload: JsonObject = {"type": command}
+    if message is not None:
+        payload["message"] = message
+
+    response = await request_broker(session_id, payload)
+
+    if output == "json":
+        _print_json_frame(response)
+        if response.get("type") != "response" or response.get("success") is not True:
+            raise SystemExit(1)
+        return
+
+    if response.get("type") != "response":
+        print("Broker did not return a valid response command frame.", file=sys.stderr)
+        raise SystemExit(1)
+
+    if response.get("command") != command:
+        print(f"Unexpected command response: {response.get('command')}", file=sys.stderr)
+        raise SystemExit(1)
+
+    if response.get("success") is not True:
+        error = response.get("error", f"{command} was not accepted")
+        print(f"{command} failed: {error}", file=sys.stderr)
+        raise SystemExit(1)
+
+    print(f"{command.replace('_', '-')} sent")
 
 
 @app.default
@@ -295,6 +332,81 @@ def prompt(
 
     try:
         asyncio.run(_run_prompt(session_id=session_id, message=message, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def steer(*, session_id: str, message: str, output: OutputFormat = "human") -> None:
+    """Queue a steering message while the session is running.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    message
+        Steering text to send to the active Pi session.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_command(
+                session_id=session_id, command="steer", message=message, output=output
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="follow-up")
+def follow_up(*, session_id: str, message: str, output: OutputFormat = "human") -> None:
+    """Queue a follow-up message to be processed after current work finishes.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    message
+        Follow-up text to send via Pi RPC.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_command(
+                session_id=session_id, command="follow_up", message=message, output=output
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def abort(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Abort the current in-progress agent operation.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_control_command(session_id=session_id, command="abort", output=output))
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

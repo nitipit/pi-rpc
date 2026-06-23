@@ -6,8 +6,9 @@ from typing import Annotated, Any, Literal, cast
 
 from dictify import Field, Model
 
-BrokerRequestType = Literal["ping", "status", "shutdown", "prompt"]
-BROKER_REQUEST_TYPES = {"ping", "status", "shutdown", "prompt"}
+BrokerRequestType = Literal["ping", "status", "shutdown", "prompt", "steer", "follow_up", "abort"]
+BROKER_REQUEST_TYPES = {"ping", "status", "shutdown", "prompt", "steer", "follow_up", "abort"}
+PASS_THROUGH_REQUEST_TYPES = {"prompt", "steer", "follow_up", "abort"}
 
 
 def is_broker_request_type(value: str) -> bool:
@@ -31,8 +32,8 @@ class BrokerRequest(Model):
 def validate_broker_request(message: dict[str, Any]) -> BrokerRequestType:
     """Validate a broker request and return its request type."""
     request_type = message.get("type") if isinstance(message, dict) else None
-    if request_type == "prompt":
-        return "prompt"
+    if request_type in PASS_THROUGH_REQUEST_TYPES:
+        return cast("BrokerRequestType", request_type)
 
     try:
         request = BrokerRequest(message)

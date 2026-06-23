@@ -93,8 +93,10 @@ class BrokerServer:
                 try:
                     request = decode_jsonl_line(line)
                     request_type = validate_broker_request(request)
-                    if request_type == "prompt":
-                        await self._prompt(request, writer)
+                    if request_type in {"prompt", "steer", "follow_up", "abort"}:
+                        await self._forward_command(
+                            request, writer, stream=request_type == "prompt"
+                        )
                         break
                     response = await self._dispatch(request, request_type)
                 except (ProtocolError, BrokerSchemaError) as exc:
@@ -118,24 +120,33 @@ class BrokerServer:
             return {"type": "error", "error": f"unsupported broker request: {request_type}"}
         return await handler(request)
 
-    async def _prompt(self, request: JsonObject, writer: asyncio.StreamWriter) -> None:
-        queue = self.pi_process.subscribe_events()
+    async def _forward_command(
+        self,
+        request: JsonObject,
+        writer: asyncio.StreamWriter,
+        *,
+        stream: bool,
+    ) -> None:
+        queue = self.pi_process.subscribe_events() if stream else None
         try:
             response = await self.pi_process.send_command(request)
             writer.write(encode_jsonl(response))
             await writer.drain()
 
-            if not self._should_stream_events(response):
+            if not stream or not self._should_stream_events(response):
                 return
 
             while True:
-                message = await queue.get()
+                message = await queue.get() if queue is not None else None
+                if message is None:
+                    break
                 writer.write(encode_jsonl(message))
                 await writer.drain()
                 if message.get("type") == "agent_end":
                     break
         finally:
-            self.pi_process.unsubscribe_events(queue)
+            if queue is not None:
+                self.pi_process.unsubscribe_events(queue)
 
     def _should_stream_events(self, response: JsonObject) -> bool:
         return (

@@ -17,11 +17,13 @@ Implemented so far:
 - readiness handshake through Pi RPC `get_state`
 - prompt forwarding to the running Pi RPC process
 - foreground event streaming until `agent_end`
+- run-control pass-through for `steer`, `follow_up`, and `abort`
 - human output from assistant text deltas and JSONL output for tools
 - schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
 
-Steering, follow-up, richer session commands, and extension UI handling are planned for later versions.
+Steering/follow-up/abort are now available via `steer`, `follow-up`, and `abort` commands.
+Richer extension UI handling is planned for later versions.
 
 ## First commands
 
@@ -31,6 +33,9 @@ uv run pi-rpc paths --session-id pi-rpc-dev
 uv run pi-rpc start --session-id pi-rpc-dev --name "Build pi-rpc"
 uv run pi-rpc status --session-id pi-rpc-dev
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Hello from pi-rpc"
+uv run pi-rpc steer --session-id pi-rpc-dev --message "Adjust the implementation"
+uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests"
+uv run pi-rpc abort --session-id pi-rpc-dev
 uv run pi-rpc stop --session-id pi-rpc-dev
 uv run pi-rpc sessions
 ```
