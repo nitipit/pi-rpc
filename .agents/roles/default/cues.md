@@ -25,3 +25,5 @@ discoveries, patterns, problems, and next-step context.
 | `v0.5 steer-followup-abort passthrough` | 2026-06-24T00:06:25+07:00 |
 | `v0.6 state-models-stats visibility` | 2026-06-24T00:16:03+07:00 |
 | `v0.7 messages-last-text-commands inspection` | 2026-06-24T00:22:59+07:00 |
+| `v0.8 model-thinking-controls provider-modelid` | 2026-06-24T00:52:26+07:00 |
+| `v0.9 session-behavior-controls` | 2026-06-24T01:11:17+07:00 |
