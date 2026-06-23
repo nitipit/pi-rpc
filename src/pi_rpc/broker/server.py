@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from pathlib import Path
 
@@ -93,7 +92,11 @@ class BrokerServer:
             while line := await reader.readline():
                 try:
                     request = decode_jsonl_line(line)
-                    response = await self._dispatch(request)
+                    request_type = validate_broker_request(request)
+                    if request_type == "prompt":
+                        await self._prompt(request, writer)
+                        break
+                    response = await self._dispatch(request, request_type)
                 except (ProtocolError, BrokerSchemaError) as exc:
                     response = {"type": "error", "error": str(exc)}
                 writer.write(encode_jsonl(response))
@@ -104,9 +107,8 @@ class BrokerServer:
             writer.close()
             await writer.wait_closed()
 
-    async def _dispatch(self, request: JsonObject) -> JsonObject:
-        request_type = validate_broker_request(request)
-        handlers: dict[str, Callable[[JsonObject], Awaitable[JsonObject]]] = {
+    async def _dispatch(self, request: JsonObject, request_type: str) -> JsonObject:
+        handlers = {
             "ping": self._ping,
             "status": self._status,
             "shutdown": self._shutdown,
@@ -115,6 +117,32 @@ class BrokerServer:
         if handler is None:
             return {"type": "error", "error": f"unsupported broker request: {request_type}"}
         return await handler(request)
+
+    async def _prompt(self, request: JsonObject, writer: asyncio.StreamWriter) -> None:
+        queue = self.pi_process.subscribe_events()
+        try:
+            response = await self.pi_process.send_command(request)
+            writer.write(encode_jsonl(response))
+            await writer.drain()
+
+            if not self._should_stream_events(response):
+                return
+
+            while True:
+                message = await queue.get()
+                writer.write(encode_jsonl(message))
+                await writer.drain()
+                if message.get("type") == "agent_end":
+                    break
+        finally:
+            self.pi_process.unsubscribe_events(queue)
+
+    def _should_stream_events(self, response: JsonObject) -> bool:
+        return (
+            response.get("type") == "response"
+            and response.get("command") == "prompt"
+            and response.get("success") is True
+        )
 
     async def _ping(self, _request: JsonObject) -> JsonObject:
         return {"type": "pong", "session_id": self.paths.session_id}

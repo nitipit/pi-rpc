@@ -42,6 +42,7 @@ class PiRpcProcess:
         self.recent_events: deque[JsonObject] = deque(maxlen=50)
         self.recent_stderr: deque[str] = deque(maxlen=RECENT_STDERR_LINES)
         self._pending: dict[str, asyncio.Future[JsonObject]] = {}
+        self._event_queues: set[asyncio.Queue[JsonObject]] = set()
         self._stdout_task: asyncio.Task[None] | None = None
         self._stderr_task: asyncio.Task[None] | None = None
 
@@ -119,6 +120,16 @@ class PiRpcProcess:
                 task.cancel()
         self.ready = False
 
+    def subscribe_events(self) -> asyncio.Queue[JsonObject]:
+        """Subscribe to future Pi RPC events."""
+        queue: asyncio.Queue[JsonObject] = asyncio.Queue()
+        self._event_queues.add(queue)
+        return queue
+
+    def unsubscribe_events(self, queue: asyncio.Queue[JsonObject]) -> None:
+        """Remove a previously subscribed event queue."""
+        self._event_queues.discard(queue)
+
     def status(self) -> dict[str, Any]:
         """Return current child process status."""
         return {
@@ -151,6 +162,8 @@ class PiRpcProcess:
                     future.set_result(message)
             else:
                 self.recent_events.append(message)
+                for queue in list(self._event_queues):
+                    queue.put_nowait(message)
         self._reject_pending(PiProcessError("Pi RPC stdout closed"))
 
     async def _read_stderr(self) -> None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,14 @@ class BrokerUnavailableError(ConnectionError):
 
 async def request_broker(session_id: str, message: JsonObject) -> dict[str, Any]:
     """Send one request to a session broker and return one response."""
+    async for response in stream_broker(session_id, message):
+        return response
+    msg = "broker closed without a response"
+    raise BrokerUnavailableError(msg)
+
+
+async def stream_broker(session_id: str, message: JsonObject) -> AsyncIterator[dict[str, Any]]:
+    """Send one request to a broker and yield all streamed responses."""
     paths = paths_for_session(session_id)
     transport = UnixBrokerTransport(paths.socket_path)
     try:
@@ -26,12 +35,9 @@ async def request_broker(session_id: str, message: JsonObject) -> dict[str, Any]
     try:
         await connection.send(message)
         async for response in connection.receive():
-            return response
+            yield response
     finally:
         await connection.close()
-
-    msg = "broker closed without a response"
-    raise BrokerUnavailableError(msg)
 
 
 def broker_socket_exists(session_id: str) -> bool:

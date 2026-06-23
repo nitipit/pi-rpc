@@ -15,10 +15,13 @@ Implemented so far:
 - a Unix-socket broker lifecycle
 - a managed `pi --mode rpc --session-id <id>` subprocess behind the broker
 - readiness handshake through Pi RPC `get_state`
+- prompt forwarding to the running Pi RPC process
+- foreground event streaming until `agent_end`
+- human output from assistant text deltas and JSONL output for tools
 - schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
 
-Prompt forwarding and event streaming are planned for later versions.
+Steering, follow-up, richer session commands, and extension UI handling are planned for later versions.
 
 ## First commands
 
@@ -27,6 +30,7 @@ uv run pi-rpc validate-session-id --session-id pi-rpc-dev
 uv run pi-rpc paths --session-id pi-rpc-dev
 uv run pi-rpc start --session-id pi-rpc-dev --name "Build pi-rpc"
 uv run pi-rpc status --session-id pi-rpc-dev
+uv run pi-rpc prompt --session-id pi-rpc-dev --message "Hello from pi-rpc"
 uv run pi-rpc stop --session-id pi-rpc-dev
 uv run pi-rpc sessions
 ```

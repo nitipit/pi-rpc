@@ -35,7 +35,9 @@ implementation flow, or review quality.
 Delegate to repo-local roles when the task clearly matches a role's duty. Try
 delegation first by default, unless doing the work directly has a clear benefit
 for speed, context continuity, simplicity, or avoiding unnecessary coordination
-overhead.
+overhead. Delegation is also for context hygiene: keep implementation details,
+git details, protocol concerns, docs work, and review findings in the matching
+role context instead of polluting the default coordinator role.
 
 Keep delegated tasks bounded and token-efficient. Prefer specialist roles for
 product judgment, protocol review, implementation-heavy work, fresh quality

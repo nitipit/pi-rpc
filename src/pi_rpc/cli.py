@@ -9,11 +9,13 @@ from typing import NoReturn
 
 from cyclopts import App
 
+from pi_rpc.client.broker import BrokerUnavailableError, stream_broker
 from pi_rpc.lifecycle import BrokerStartError, broker_status, start_broker, stop_broker
 from pi_rpc.models import OutputFormat, SessionStatusView
 from pi_rpc.paths import known_metadata_paths, paths_for_session
 from pi_rpc.session_id import SessionIdError, session_identity
 from pi_rpc.status import inspect_session
+from pi_rpc.transport.protocol import JsonObject
 
 app = App(help="Remote control for long-running Pi RPC sessions.")
 
@@ -31,6 +33,26 @@ def _exit_invalid_session(error: SessionIdError) -> NoReturn:
 
 def _print_json(data: object) -> None:
     print(json.dumps(data, indent=2, sort_keys=True))
+
+
+def _print_json_frame(data: object) -> None:
+    print(json.dumps(data, sort_keys=True))
+
+
+def _print_text_delta(event: JsonObject) -> None:
+    """Print assistant text delta chunks from message_update events."""
+
+    if event.get("type") != "message_update":
+        return
+
+    assistant_event = event.get("assistantMessageEvent")
+    if not isinstance(assistant_event, dict):
+        return
+    if assistant_event.get("type") != "text_delta":
+        return
+    delta = assistant_event.get("delta")
+    if isinstance(delta, str):
+        print(delta, end="", flush=True)
 
 
 def _broker_status_human(data: dict[str, object]) -> None:
@@ -60,6 +82,42 @@ def _status_human(view: SessionStatusView) -> None:
     print(f"Log:     {view.log_path}")
     if view.note:
         print(f"Note:    {view.note}")
+
+
+async def _run_prompt(*, session_id: str, message: str, output: OutputFormat) -> None:
+    """Send a prompt command and stream the Pi RPC event response."""
+
+    saw_response = False
+    accepted = False
+    async for frame in stream_broker(session_id, {"type": "prompt", "message": message}):
+        if output == "json":
+            _print_json_frame(frame)
+            if frame.get("type") == "response":
+                saw_response = True
+                accepted = frame.get("success") is True
+                if not accepted:
+                    raise SystemExit(1)
+            continue
+
+        if frame.get("type") == "response":
+            saw_response = True
+            accepted = frame.get("command") == "prompt" and frame.get("success") is True
+            if not accepted:
+                error = frame.get("error", "prompt was not accepted")
+                print(f"Prompt failed: {error}", file=sys.stderr)
+                raise SystemExit(1)
+            continue
+
+        if frame.get("type") == "agent_end":
+            print()
+
+        _print_text_delta(frame)
+
+    if not saw_response:
+        print("No prompt response from broker.", file=sys.stderr)
+        raise SystemExit(1)
+    if output == "human" and not accepted:
+        raise SystemExit(1)
 
 
 @app.default
@@ -214,6 +272,34 @@ def status(*, session_id: str, output: OutputFormat = "human") -> None:
         _print_json(view.as_dict())
     else:
         _status_human(view)
+
+
+@app.command
+def prompt(
+    *,
+    session_id: str,
+    message: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Send a prompt to the managed Pi session and stream events.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    message
+        Prompt content to send via Pi RPC.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_prompt(session_id=session_id, message=message, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
 
 
 @app.command

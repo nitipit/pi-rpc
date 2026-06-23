@@ -20,3 +20,5 @@ discoveries, patterns, problems, and next-step context.
 | `release-decider stop-continue goal-sufficient` | 2026-06-23T23:17:45+07:00 |
 | `dictify schema-validation skill-installed` | 2026-06-23T23:35:32+07:00 |
 | `v0.3 broker-starts-pi get-state-ready` | 2026-06-23T23:49:10+07:00 |
+| `context-hygiene delegate-matching-roles` | 2026-06-24T00:00:53+07:00 |
+| `v0.4 prompt-streams-text-deltas-jsonl` | 2026-06-24T00:00:53+07:00 |
