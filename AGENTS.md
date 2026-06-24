@@ -50,6 +50,11 @@ judge whether active development should stop, pause, or continue further against
 `goal/main.md` without asking the user by default. Continue development until
 the user says to pause or the final release-decider gate says to pause/stop.
 
+For temporary/stateless Pi role work, use `pi --no-session` and close any tmux
+or terminal-multiplexer session after capturing the result. Do not use
+`--session-id` for disposable review/delegation work unless durable Pi session
+state is explicitly intended.
+
 For stateful role sessions, do not repeatedly resend the full initial role
 prompt or unchanged context. Reuse the session's valid context and send only new
 facts, changed facts, task constraints, and expected output. If unsure whether a

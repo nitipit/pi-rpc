@@ -35,3 +35,4 @@ discoveries, patterns, problems, and next-step context.
 | `v0.15 interactive-extension-ui-prompt-mode` | 2026-06-24T08:24:07+07:00 |
 | `v0.16 rpc-payload-controls` | 2026-06-24T08:39:50+07:00 |
 | `v0.17 image-attachments-prompt-steer-follow-up` | 2026-06-24T08:59:27+07:00 |
+| `pi-role-temp-use-no-session-close-tmux` | 2026-06-24T09:07:15+07:00 |
