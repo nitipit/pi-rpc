@@ -36,3 +36,4 @@ discoveries, patterns, problems, and next-step context.
 | `v0.16 rpc-payload-controls` | 2026-06-24T08:39:50+07:00 |
 | `v0.17 image-attachments-prompt-steer-follow-up` | 2026-06-24T08:59:27+07:00 |
 | `pi-role-temp-use-no-session-close-tmux` | 2026-06-24T09:07:15+07:00 |
+| `v0.18 run-detach-jobs cli-modularized` | 2026-06-24T10:00:33+07:00 |
