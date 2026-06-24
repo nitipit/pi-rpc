@@ -5,19 +5,19 @@ from __future__ import annotations
 import sys
 from collections.abc import Callable, Sequence
 
-from pi_rpc.cli_support.common import print_json_frame, print_text_delta
-from pi_rpc.cli_support.extension_ui import (
+from pi_rpc.cli.support.common import print_json_frame, print_text_delta
+from pi_rpc.cli.support.extension_ui import (
     build_ui_response_request,
     maybe_interactive_extension_ui_response,
     print_extension_ui_request,
 )
-from pi_rpc.cli_support.model_resolution import resolve_model_for_session
-from pi_rpc.cli_support.payloads import (
+from pi_rpc.cli.support.model_resolution import resolve_model_for_session
+from pi_rpc.cli.support.payloads import (
     build_bash_request,
     build_message_request,
     build_prompt_request,
 )
-from pi_rpc.cli_support.summaries import (
+from pi_rpc.cli.support.summaries import (
     print_abort_bash_summary,
     print_abort_retry_summary,
     print_auto_state_summary,

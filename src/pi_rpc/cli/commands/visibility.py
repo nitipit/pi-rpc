@@ -7,8 +7,8 @@ import sys
 
 from cyclopts import App
 
-from pi_rpc.cli_support.common import exit_invalid_session
-from pi_rpc.cli_support.runners import run_read_only_command
+from pi_rpc.cli.support.common import exit_invalid_session
+from pi_rpc.cli.support.runners import run_read_only_command
 from pi_rpc.client.broker import BrokerUnavailableError
 from pi_rpc.models import OutputFormat
 from pi_rpc.session_id import SessionIdError

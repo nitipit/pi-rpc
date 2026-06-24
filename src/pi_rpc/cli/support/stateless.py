@@ -9,9 +9,9 @@ from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 
 from pi_rpc.broker.pi_process import PiRpcProcess
-from pi_rpc.cli_support.common import print_json_frame, print_text_delta
-from pi_rpc.cli_support.extension_ui import print_extension_ui_request
-from pi_rpc.cli_support.payloads import build_prompt_request
+from pi_rpc.cli.support.common import print_json_frame, print_text_delta
+from pi_rpc.cli.support.extension_ui import print_extension_ui_request
+from pi_rpc.cli.support.payloads import build_prompt_request
 from pi_rpc.models import OutputFormat
 from pi_rpc.transport.protocol import JsonObject
 

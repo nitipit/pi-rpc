@@ -6,7 +6,7 @@ import sys
 
 from cyclopts import App
 
-from pi_rpc.cli_support.common import print_json
+from pi_rpc.cli.support.common import print_json
 from pi_rpc.jobs.manager import job_text, list_job_records, read_job_frames, read_job_record
 from pi_rpc.models import OutputFormat
 

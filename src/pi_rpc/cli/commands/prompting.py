@@ -8,17 +8,17 @@ from pathlib import Path
 
 from cyclopts import App
 
-from pi_rpc.cli_support.common import exit_invalid_session
-from pi_rpc.cli_support.extension_ui import parse_confirmed
-from pi_rpc.cli_support.payloads import StreamingBehavior
-from pi_rpc.cli_support.runners import (
+from pi_rpc.cli.support.common import exit_invalid_session
+from pi_rpc.cli.support.extension_ui import parse_confirmed
+from pi_rpc.cli.support.payloads import StreamingBehavior
+from pi_rpc.cli.support.runners import (
     run_abort_bash_command,
     run_bash_command,
     run_control_command,
     run_prompt,
     run_ui_response_command,
 )
-from pi_rpc.cli_support.stateless import run_stateless_prompt
+from pi_rpc.cli.support.stateless import run_stateless_prompt
 from pi_rpc.client.broker import BrokerUnavailableError
 from pi_rpc.models import OutputFormat
 from pi_rpc.session_id import SessionIdError
@@ -67,7 +67,7 @@ def register(app: App) -> None:
                     thinking=thinking,
                 )
                 if output == "json":
-                    from pi_rpc.cli_support.common import print_json
+                    from pi_rpc.cli.support.common import print_json
 
                     print_json(job.as_dict())
                 else:
@@ -113,7 +113,7 @@ def register(app: App) -> None:
                     streaming_behavior=streaming_behavior,
                 )
                 if output == "json":
-                    from pi_rpc.cli_support.common import print_json
+                    from pi_rpc.cli.support.common import print_json
 
                     print_json(job.as_dict())
                 else:

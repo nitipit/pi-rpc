@@ -7,8 +7,8 @@ import sys
 
 from cyclopts import App
 
-from pi_rpc.cli_support.common import exit_invalid_session
-from pi_rpc.cli_support.runners import (
+from pi_rpc.cli.support.common import exit_invalid_session
+from pi_rpc.cli.support.runners import (
     run_abort_retry_command,
     run_auto_compaction_command,
     run_auto_retry_command,
@@ -20,7 +20,7 @@ from pi_rpc.cli_support.runners import (
     run_steering_mode_command,
     run_thinking_command,
 )
-from pi_rpc.cli_support.summaries import print_cycle_model_summary, print_cycle_thinking_summary
+from pi_rpc.cli.support.summaries import print_cycle_model_summary, print_cycle_thinking_summary
 from pi_rpc.client.broker import BrokerUnavailableError
 from pi_rpc.models import OutputFormat
 from pi_rpc.session_id import SessionIdError

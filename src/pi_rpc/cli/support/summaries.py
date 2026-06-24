@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import cast
 
-from pi_rpc.cli_support.model_resolution import extract_model_refs, model_ref
+from pi_rpc.cli.support.model_resolution import extract_model_refs, model_ref
 from pi_rpc.transport.protocol import JsonObject
 
 AutoMode = str

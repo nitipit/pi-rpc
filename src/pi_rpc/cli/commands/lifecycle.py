@@ -7,7 +7,7 @@ import sys
 
 from cyclopts import App
 
-from pi_rpc.cli_support.common import (
+from pi_rpc.cli.support.common import (
     broker_status_human,
     exit_invalid_session,
     print_json,

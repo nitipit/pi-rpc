@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from pi_rpc.cli_support.payloads import build_prompt_request
+from pi_rpc.cli.support.payloads import build_prompt_request
 from pi_rpc.jobs.models import JobKind, JobRecord, JobStatus
 from pi_rpc.paths import known_job_metadata_paths, paths_for_job
 from pi_rpc.session_id import session_identity
