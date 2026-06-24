@@ -32,3 +32,4 @@ discoveries, patterns, problems, and next-step context.
 | `v0.12 extension-ui-response-bridge` | 2026-06-24T07:55:31+07:00 |
 | `v0.13 docusaurus-deno-docs-foundation` | 2026-06-24T08:05:05+07:00 |
 | `v0.14 ci-packaging-docs-validation` | 2026-06-24T08:12:17+07:00 |
+| `v0.15 interactive-extension-ui-prompt-mode` | 2026-06-24T08:24:07+07:00 |
