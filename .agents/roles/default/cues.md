@@ -31,3 +31,4 @@ discoveries, patterns, problems, and next-step context.
 | `v0.11 bash-abort-bash-controls` | 2026-06-24T07:22:05+07:00 |
 | `v0.12 extension-ui-response-bridge` | 2026-06-24T07:55:31+07:00 |
 | `v0.13 docusaurus-deno-docs-foundation` | 2026-06-24T08:05:05+07:00 |
+| `v0.14 ci-packaging-docs-validation` | 2026-06-24T08:12:17+07:00 |
