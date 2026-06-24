@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-24T07:46:50+07:00
+updated: 2026-06-24T08:05:05+07:00
 blocked_by: []
 ---
 
@@ -69,3 +69,4 @@ modular so Unix socket can later grow into TCP or other transports.
 - 2026-06-24T06:49:50+07:00 — Implemented v0.10 session file/branch controls and broker mappings.
 - 2026-06-24T07:16:26+07:00 — Implemented v0.11 shell command controls (`bash`/`abort-bash`) and validation updates.
 - 2026-06-24T07:46:50+07:00 — Implemented v0.12 extension UI response bridge.
+- 2026-06-24T08:05:05+07:00 — Implemented v0.13 Docusaurus docs foundation.
