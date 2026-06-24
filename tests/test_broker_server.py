@@ -71,6 +71,23 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_last_assistant_text', 'success': True, 'data': {'text': 'previous assistant output'}}), flush=True)\n"
         "    elif payload.get('type') == 'get_commands':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_commands', 'success': True, 'data': [{'name': 'echo', 'description': 'repeat input', 'source': 'builtin'}, {'name': 'run', 'description': 'run shell', 'source': 'plugin'}]}), flush=True)\n"
+        "    elif payload.get('type') == 'get_fork_messages':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'get_fork_messages', 'success': True, 'data': [{'entryId': 'entry-1', 'content': 'first'}]}), flush=True)\n"
+        "    elif payload.get('type') in ('new_session', 'switch_session', 'clone', 'fork', 'export_html'):\n"
+        "        response = {'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}\n"
+        "        if payload.get('type') == 'new_session':\n"
+        "            response['data'] = {'sessionId': 'generated-session'}\n"
+        "            if 'parentSession' in payload:\n"
+        "                response['data']['parentSession'] = payload.get('parentSession')\n"
+        "        elif payload.get('type') == 'switch_session':\n"
+        "            response['data'] = {'sessionPath': payload.get('sessionPath')}\n"
+        "        elif payload.get('type') == 'clone':\n"
+        "            response['data'] = {'cancelled': False}\n"
+        "        elif payload.get('type') == 'fork':\n"
+        "            response['data'] = {'entryId': payload.get('entryId')}\n"
+        "        elif payload.get('type') == 'export_html':\n"
+        "            response['data'] = {'path': payload.get('outputPath', '/tmp/generated.html')}\n"
+        "        print(json.dumps(response), flush=True)\n"
         "    elif payload.get('type') == 'set_model':\n"
         "        provider = payload.get('provider')\n"
         "        model_id = payload.get('modelId')\n"
@@ -250,6 +267,8 @@ async def test_broker_server_streams_prompt_events_until_agent_end(tmp_path: Pat
         ("steer", {"message": "reroute"}),
         ("follow_up", {"message": "then do this"}),
         ("abort", {}),
+        ("clone", {"entryId": "entry-1"}),
+        ("fork", {"entryId": "entry-2"}),
     ],
 )
 async def test_broker_server_forwards_control_commands_without_event_streaming(
@@ -311,6 +330,7 @@ async def test_broker_server_forwards_control_commands_without_event_streaming(
         ("messages", "get_messages", "role"),
         ("last-assistant-text", "get_last_assistant_text", "text"),
         ("commands", "get_commands", "name"),
+        ("fork-messages", "get_fork_messages", "entryId"),
     ],
 )
 async def test_broker_server_maps_read_only_commands_to_pi_commands(
@@ -390,11 +410,20 @@ async def test_broker_server_maps_read_only_commands_to_pi_commands(
         ({"type": "steering-mode", "mode": "all"}, "set_steering_mode", "mode"),
         ({"type": "follow-up-mode", "mode": "one-at-a-time"}, "set_follow_up_mode", "mode"),
         ({"type": "abort-retry"}, "abort_retry", "aborted"),
+        (
+            {"type": "new-session", "parentSession": "/tmp/parent.session"},
+            "new_session",
+            "sessionId",
+        ),
+        ({"type": "switch-session", "sessionPath": "/tmp/branch"}, "switch_session", "sessionPath"),
+        ({"type": "clone"}, "clone", "cancelled"),
+        ({"type": "fork", "entryId": "entry-fork"}, "fork", "entryId"),
+        ({"type": "export-html", "outputPath": "/tmp/out.html"}, "export_html", "path"),
     ],
 )
 async def test_broker_server_maps_mutation_commands_to_pi_commands(
     tmp_path: Path,
-    broker_request: dict[str, str],
+    broker_request: dict[str, object],
     pi_command: str,
     data_key: str,
 ) -> None:
@@ -432,6 +461,71 @@ async def test_broker_server_maps_mutation_commands_to_pi_commands(
         if not isinstance(response_data, dict):
             raise AssertionError("Expected dict data")
         assert data_key in response_data
+
+        shutdown_connection = await transport.connect()
+        await shutdown_connection.send({"type": "shutdown"})
+        await anext(shutdown_connection.receive())
+        await shutdown_connection.close()
+
+        await asyncio.wait_for(server_task, timeout=1)
+    finally:
+        if not server_task.done():
+            server_task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await server_task
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "include_output_path",
+    [True, False],
+)
+async def test_broker_server_exports_html_with_conditional_output_path(
+    tmp_path: Path,
+    include_output_path: bool,
+) -> None:
+    paths = SessionPaths(
+        session_id="test-session",
+        file_stem="test-session-abc123",
+        socket_path=tmp_path / "test.sock",
+        pid_path=tmp_path / "test.pid",
+        metadata_path=tmp_path / "test.json",
+        log_path=tmp_path / "test.log",
+    )
+    fake_pi = write_fake_pi_with_control_command_events(tmp_path)
+    server = BrokerServer(paths=paths, cwd=str(tmp_path), name="Test Session", pi_bin=str(fake_pi))
+    server_task = asyncio.create_task(server.serve())
+
+    try:
+        transport = UnixBrokerTransport(paths.socket_path)
+        for _ in range(100):
+            if paths.socket_path.exists():
+                break
+            await asyncio.sleep(0.01)
+
+        request = {"type": "export-html"}
+        if include_output_path:
+            request["outputPath"] = "/tmp/out.html"
+
+        connection = await transport.connect()
+        await connection.send(request)
+        responses: list[dict[str, object]] = []
+        async for response in connection.receive():
+            responses.append(response)
+        await connection.close()
+
+        assert len(responses) == 1
+        assert responses[0]["type"] == "response"
+        assert responses[0]["command"] == "export_html"
+        assert responses[0]["success"] is True
+
+        response_data = responses[0]["data"]
+        if not isinstance(response_data, dict):
+            raise AssertionError("Expected dict data")
+        if include_output_path:
+            assert response_data.get("path") == "/tmp/out.html"
+        else:
+            assert response_data.get("path") == "/tmp/generated.html"
 
         shutdown_connection = await transport.connect()
         await shutdown_connection.send({"type": "shutdown"})

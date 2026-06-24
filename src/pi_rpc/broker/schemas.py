@@ -31,6 +31,12 @@ BrokerRequestType = Literal[
     "steering-mode",
     "follow-up-mode",
     "abort-retry",
+    "new-session",
+    "switch-session",
+    "clone",
+    "fork",
+    "fork-messages",
+    "export-html",
 ]
 BROKER_REQUEST_TYPES = {
     "ping",
@@ -57,6 +63,12 @@ BROKER_REQUEST_TYPES = {
     "steering-mode",
     "follow-up-mode",
     "abort-retry",
+    "new-session",
+    "switch-session",
+    "clone",
+    "fork",
+    "fork-messages",
+    "export-html",
 }
 PASS_THROUGH_REQUEST_TYPES = {
     "prompt",
@@ -80,6 +92,12 @@ PASS_THROUGH_REQUEST_TYPES = {
     "steering-mode",
     "follow-up-mode",
     "abort-retry",
+    "new-session",
+    "switch-session",
+    "clone",
+    "fork",
+    "fork-messages",
+    "export-html",
 }
 
 

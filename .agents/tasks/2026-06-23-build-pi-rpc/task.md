@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-24T01:05:12+07:00
+updated: 2026-06-24T06:49:50+07:00
 blocked_by: []
 ---
 
@@ -35,6 +35,7 @@ validated, and committed before moving on.
       `cycle-thinking`.
 - [x] v0.9 session behavior controls: `name`, `compact`, auto controls,
       queue modes, and `abort-retry`.
+- [x] v0.10 session file/branch controls: new-session, switch-session, clone, fork, fork-messages, export-html.
 - [ ] Later versions: extension UI, docs polish, packaging, and remaining session mutators.
 
 ## Attachments
@@ -62,3 +63,4 @@ modular so Unix socket can later grow into TCP or other transports.
 - 2026-06-24T00:22:59+07:00 — Delegated and implemented v0.7 broader read-only inspection commands.
 - 2026-06-24T00:48:11+07:00 — Implemented v0.8 model/thinking controls.
 - 2026-06-24T01:05:12+07:00 — Implemented v0.9 session behavior controls.
+- 2026-06-24T06:49:50+07:00 — Implemented v0.10 session file/branch controls and broker mappings.

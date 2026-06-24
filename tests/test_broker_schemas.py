@@ -32,6 +32,12 @@ from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
         "steering-mode",
         "follow-up-mode",
         "abort-retry",
+        "new-session",
+        "switch-session",
+        "clone",
+        "fork",
+        "fork-messages",
+        "export-html",
     ],
 )
 def test_validate_broker_request_accepts_known_types(request_type: str) -> None:
@@ -84,3 +90,18 @@ def test_validate_broker_request_accepts_pass_through_payloads() -> None:
         == "follow-up-mode"
     )
     assert validate_broker_request({"type": "abort-retry"}) == "abort-retry"
+    assert (
+        validate_broker_request({"type": "new-session", "parentSession": "/tmp/session.json"})
+        == "new-session"
+    )
+    assert (
+        validate_broker_request({"type": "switch-session", "sessionPath": "/tmp/session.json"})
+        == "switch-session"
+    )
+    assert validate_broker_request({"type": "clone"}) == "clone"
+    assert validate_broker_request({"type": "fork", "entryId": "entry-1"}) == "fork"
+    assert validate_broker_request({"type": "fork-messages"}) == "fork-messages"
+    assert (
+        validate_broker_request({"type": "export-html", "outputPath": "/tmp/out.html"})
+        == "export-html"
+    )

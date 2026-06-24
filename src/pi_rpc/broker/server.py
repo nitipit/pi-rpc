@@ -35,6 +35,12 @@ _BROKER_TO_PI_COMMAND = {
     "steering-mode": "set_steering_mode",
     "follow-up-mode": "set_follow_up_mode",
     "abort-retry": "abort_retry",
+    "new-session": "new_session",
+    "switch-session": "switch_session",
+    "clone": "clone",
+    "fork": "fork",
+    "fork-messages": "get_fork_messages",
+    "export-html": "export_html",
 }
 
 

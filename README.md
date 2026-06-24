@@ -33,6 +33,8 @@ Read-only visibility remains via `state`, `models`, `stats`, `messages`,
 `last-assistant-text`, and `commands`.
 Session behavior controls are available via `name`, `compact`, `auto-compaction`,
 `auto-retry`, `steering-mode`, `follow-up-mode`, and `abort-retry`.
+Branch/session controls are available via `new-session`, `switch-session`, `clone`,
+`fork`, `fork-messages`, and `export-html`.
 Richer extension UI handling is planned for later versions.
 
 ## First commands
@@ -60,6 +62,13 @@ uv run pi-rpc auto-retry --session-id pi-rpc-dev on
 uv run pi-rpc steering-mode --session-id pi-rpc-dev one-at-a-time
 uv run pi-rpc follow-up-mode --session-id pi-rpc-dev all
 uv run pi-rpc abort-retry --session-id pi-rpc-dev
+uv run pi-rpc new-session --session-id pi-rpc-dev --parent-session /tmp/parent-session
+uv run pi-rpc switch-session --session-id pi-rpc-dev /tmp/branch-session
+uv run pi-rpc clone --session-id pi-rpc-dev
+uv run pi-rpc fork --session-id pi-rpc-dev entry-1
+uv run pi-rpc fork-messages --session-id pi-rpc-dev
+uv run pi-rpc export-html --session-id pi-rpc-dev
+uv run pi-rpc export-html --session-id pi-rpc-dev --output-path /tmp/session-export.html
 uv run pi-rpc steer --session-id pi-rpc-dev --message "Adjust the implementation"
 uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests"
 uv run pi-rpc abort --session-id pi-rpc-dev

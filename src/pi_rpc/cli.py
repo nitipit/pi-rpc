@@ -32,6 +32,7 @@ PI_READ_ONLY_COMMANDS = {
     "messages": "get_messages",
     "last-assistant-text": "get_last_assistant_text",
     "commands": "get_commands",
+    "fork-messages": "get_fork_messages",
 }
 
 app = App(help="Remote control for long-running Pi RPC sessions.")
@@ -951,6 +952,216 @@ def abort(*, session_id: str, output: OutputFormat = "human") -> None:
 
     try:
         asyncio.run(_run_control_command(session_id=session_id, command="abort", output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="new-session")
+def new_session(
+    *,
+    session_id: str,
+    parent_session: str | None = None,
+    output: OutputFormat = "human",
+) -> None:
+    """Create a new Pi session, optionally from a parent session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable source session handle.
+    parent_session
+        Optional parent session path for branching.
+    output
+        Output format: human or json.
+    """
+
+    request: JsonObject = {"type": "new-session"}
+    if parent_session is not None:
+        request["parentSession"] = parent_session
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request=request,
+                expected_command="new_session",
+                output=output,
+                command_label="new-session",
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="switch-session")
+def switch_session(
+    session_path: str,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Switch to an existing branch session path.
+
+    Parameters
+    ----------
+    session_path
+        Absolute or repository-relative path used by Pi as ``sessionPath``.
+    session_id
+        Stable readable source session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request={"type": "switch-session", "sessionPath": session_path},
+                expected_command="switch_session",
+                output=output,
+                command_label="switch-session",
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def clone(
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Clone the current active branch into a new session.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable source session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request={"type": "clone"},
+                expected_command="clone",
+                output=output,
+                command_label="clone",
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="fork")
+def fork(
+    entry_id: str,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Create a new branch from an existing session entry id.
+
+    Parameters
+    ----------
+    entry_id
+        Entry id to fork from.
+    session_id
+        Stable readable source session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request={"type": "fork", "entryId": entry_id},
+                expected_command="fork",
+                output=output,
+                command_label="fork",
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="fork-messages")
+def fork_messages(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Show fork messages for the current branch.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable source session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_read_only_command(
+                session_id=session_id, broker_command="fork-messages", output=output
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="export-html")
+def export_html(
+    *,
+    session_id: str,
+    output_path: str | None = None,
+    output: OutputFormat = "human",
+) -> None:
+    """Export current session as HTML.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable source session handle.
+    output_path
+        Optional output path for the generated HTML export.
+    output
+        Output format: human or json.
+    """
+
+    request: JsonObject = {"type": "export-html"}
+    if output_path is not None:
+        request["outputPath"] = output_path
+
+    try:
+        asyncio.run(
+            _run_control_request(
+                session_id=session_id,
+                request=request,
+                expected_command="export_html",
+                output=output,
+                command_label="export-html",
+            )
+        )
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
