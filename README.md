@@ -106,6 +106,14 @@ uv run ruff format .
 uv run ruff check .
 uv run ty check
 uv run pytest
+uv build
+```
+
+Docs use Docusaurus through Deno tasks:
+
+```bash
+deno task docs:dev
+deno task docs:build
 ```
 
 See `goal/main.md` for the product goal and review perspectives.
