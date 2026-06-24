@@ -24,6 +24,8 @@ _BROKER_TO_PI_COMMAND = {
     "messages": "get_messages",
     "last-assistant-text": "get_last_assistant_text",
     "commands": "get_commands",
+    "bash": "bash",
+    "abort_bash": "abort_bash",
     "model": "set_model",
     "cycle-model": "cycle_model",
     "thinking": "set_thinking_level",

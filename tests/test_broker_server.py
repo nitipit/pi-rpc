@@ -142,6 +142,10 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "            print(json.dumps({'id': payload.get('id'), 'type': 'error', 'error': 'missing mode'}), flush=True)\n"
         "    elif payload.get('type') == 'abort_retry':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'abort_retry', 'success': True, 'data': {'aborted': True}}), flush=True)\n"
+        "    elif payload.get('type') == 'bash':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'bash', 'success': True, 'data': {'exitCode': 0, 'cancelled': False, 'truncated': False, 'output': 'hello from bash'}}), flush=True)\n"
+        "    elif payload.get('type') == 'abort_bash':\n"
+        "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'abort_bash', 'success': True, 'data': {'aborted': True}}), flush=True)\n"
         "    elif payload.get('type') in ('steer', 'follow_up', 'abort'):\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n"
         "        print(json.dumps({'type': 'agent_end', 'messages': []}), flush=True)\n"
@@ -267,6 +271,8 @@ async def test_broker_server_streams_prompt_events_until_agent_end(tmp_path: Pat
         ("steer", {"message": "reroute"}),
         ("follow_up", {"message": "then do this"}),
         ("abort", {}),
+        ("bash", {"command": "ls"}),
+        ("abort_bash", {}),
         ("clone", {"entryId": "entry-1"}),
         ("fork", {"entryId": "entry-2"}),
     ],

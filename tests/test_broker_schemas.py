@@ -32,6 +32,8 @@ from pi_rpc.broker.schemas import BrokerSchemaError, validate_broker_request
         "steering-mode",
         "follow-up-mode",
         "abort-retry",
+        "bash",
+        "abort_bash",
         "new-session",
         "switch-session",
         "clone",
@@ -90,6 +92,8 @@ def test_validate_broker_request_accepts_pass_through_payloads() -> None:
         == "follow-up-mode"
     )
     assert validate_broker_request({"type": "abort-retry"}) == "abort-retry"
+    assert validate_broker_request({"type": "bash", "command": "ls"}) == "bash"
+    assert validate_broker_request({"type": "abort_bash"}) == "abort_bash"
     assert (
         validate_broker_request({"type": "new-session", "parentSession": "/tmp/session.json"})
         == "new-session"

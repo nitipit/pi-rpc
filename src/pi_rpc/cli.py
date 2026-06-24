@@ -376,6 +376,41 @@ async def _run_abort_retry_command(
     )
 
 
+async def _run_bash_command(
+    *,
+    session_id: str,
+    command: str,
+    output: OutputFormat,
+) -> None:
+    """Run a shell command in the active session."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "bash", "command": command},
+        expected_command="bash",
+        output=output,
+        command_label="bash",
+        response_printer=_print_bash_summary,
+    )
+
+
+async def _run_abort_bash_command(
+    *,
+    session_id: str,
+    output: OutputFormat,
+) -> None:
+    """Abort a running bash command."""
+
+    await _run_control_request(
+        session_id=session_id,
+        request={"type": "abort_bash"},
+        expected_command="abort_bash",
+        output=output,
+        command_label="abort-bash",
+        response_printer=_print_abort_bash_summary,
+    )
+
+
 def _model_ref(model: object) -> str | None:
     """Return a provider/id reference from a Pi model object or string."""
 
@@ -656,6 +691,46 @@ def _print_abort_retry_summary(response: JsonObject) -> None:
         return
 
     print("  abort-retry: sent")
+
+
+def _print_bash_summary(response: JsonObject) -> None:
+    data = response.get("data")
+    if not isinstance(data, dict):
+        print("  bash: no output")
+        return
+
+    exit_code = data.get("exitCode", data.get("exit_code"))
+    if isinstance(exit_code, int):
+        print(f"  exitCode: {exit_code}")
+
+    cancelled = data.get("cancelled")
+    if isinstance(cancelled, bool):
+        print(f"  cancelled: {cancelled}")
+
+    truncated = data.get("truncated")
+    if isinstance(truncated, bool):
+        print(f"  truncated: {truncated}")
+
+    output = data.get("output")
+    if isinstance(output, str):
+        print(f"  output: {output}")
+        return
+
+    output_path = data.get("outputPath", data.get("path", data.get("output_path")))
+    if isinstance(output_path, str):
+        print(f"  path: {output_path}")
+
+
+def _print_abort_bash_summary(response: JsonObject) -> None:
+    data = response.get("data")
+    if isinstance(data, dict) and isinstance(data.get("aborted"), bool):
+        if data.get("aborted"):
+            print("  abort-bash: aborted")
+        else:
+            print("  abort-bash: nothing to abort")
+        return
+
+    print("  abort-bash: success")
 
 
 async def _run_command_and_print(
@@ -952,6 +1027,55 @@ def abort(*, session_id: str, output: OutputFormat = "human") -> None:
 
     try:
         asyncio.run(_run_control_command(session_id=session_id, command="abort", output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command(name="abort-bash")
+def abort_bash(*, session_id: str, output: OutputFormat = "human") -> None:
+    """Abort the most recent running bash command.
+
+    Parameters
+    ----------
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_abort_bash_command(session_id=session_id, output=output))
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+
+
+@app.command
+def bash(
+    command: str,
+    *,
+    session_id: str,
+    output: OutputFormat = "human",
+) -> None:
+    """Run a shell command in the active Pi session.
+
+    Parameters
+    ----------
+    command
+        Shell command text to execute.
+    session_id
+        Stable readable session handle.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(_run_bash_command(session_id=session_id, command=command, output=output))
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
