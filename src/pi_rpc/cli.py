@@ -73,6 +73,22 @@ def _print_text_delta(event: JsonObject) -> None:
         print(delta, end="", flush=True)
 
 
+def _print_extension_ui_request(event: JsonObject, *, session_id: str) -> None:
+    """Print a compact notice for extension UI requests during human streaming."""
+
+    if event.get("type") != "extension_ui_request":
+        return
+
+    request_id = event.get("id")
+    method = event.get("method")
+    title = event.get("title") or event.get("message") or "extension UI request"
+    print()
+    print(f"Extension UI request: {method} {request_id}")
+    print(f"  {title}")
+    if isinstance(request_id, str):
+        print(f"  respond: pi-rpc ui-respond --session-id {session_id} {request_id} ...")
+
+
 def _broker_status_human(data: dict[str, object]) -> None:
     metadata = data.get("metadata")
     if not isinstance(metadata, dict):
@@ -129,6 +145,7 @@ async def _run_prompt(*, session_id: str, message: str, output: OutputFormat) ->
         if frame.get("type") == "agent_end":
             print()
 
+        _print_extension_ui_request(frame, session_id=session_id)
         _print_text_delta(frame)
 
     if not saw_response:
@@ -409,6 +426,76 @@ async def _run_abort_bash_command(
         command_label="abort-bash",
         response_printer=_print_abort_bash_summary,
     )
+
+
+async def _run_ui_response_command(
+    *,
+    session_id: str,
+    ui_request_id: str,
+    value: str | None,
+    confirmed: bool | None,
+    cancelled: bool,
+    output: OutputFormat,
+) -> None:
+    """Send an extension UI dialog response without waiting for Pi output."""
+
+    request = _build_ui_response_request(
+        ui_request_id=ui_request_id,
+        value=value,
+        confirmed=confirmed,
+        cancelled=cancelled,
+    )
+    await _run_command_and_print(
+        session_id=session_id,
+        request=request,
+        expected_command="extension_ui_response",
+        output=output,
+        command_label="ui-respond",
+        response_printer=_print_ui_response_summary,
+    )
+
+
+def _parse_confirmed(value: str | None) -> bool | None:
+    """Parse a CLI confirmation value into a boolean."""
+
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized in {"true", "yes", "y", "1"}:
+        return True
+    if normalized in {"false", "no", "n", "0"}:
+        return False
+    msg = "--confirmed must be true/false, yes/no, or 1/0."
+    raise ValueError(msg)
+
+
+def _build_ui_response_request(
+    *,
+    ui_request_id: str,
+    value: str | None,
+    confirmed: bool | None,
+    cancelled: bool,
+) -> JsonObject:
+    """Build a validated broker request for an extension UI response."""
+
+    if not ui_request_id:
+        msg = "UI request id is required."
+        raise ValueError(msg)
+
+    provided = int(value is not None) + int(confirmed is not None) + int(cancelled)
+    if provided != 1:
+        msg = "Provide exactly one of --value, --confirmed, or --cancelled."
+        raise ValueError(msg)
+
+    request: JsonObject = {"type": "ui-response", "uiRequestId": ui_request_id}
+    if cancelled:
+        request["cancelled"] = True
+    elif confirmed is not None:
+        request["confirmed"] = confirmed
+    else:
+        assert value is not None
+        request["value"] = value
+    return request
 
 
 def _model_ref(model: object) -> str | None:
@@ -733,6 +820,14 @@ def _print_abort_bash_summary(response: JsonObject) -> None:
     print("  abort-bash: success")
 
 
+def _print_ui_response_summary(response: JsonObject) -> None:
+    data = response.get("data")
+    if isinstance(data, dict) and isinstance(data.get("id"), str):
+        print(f"  ui-response: sent for {data['id']}")
+        return
+    print("  ui-response: sent")
+
+
 async def _run_command_and_print(
     *,
     session_id: str,
@@ -1053,6 +1148,55 @@ def abort_bash(*, session_id: str, output: OutputFormat = "human") -> None:
         raise SystemExit(1) from exc
     except SessionIdError as exc:
         _exit_invalid_session(exc)
+
+
+@app.command(name="ui-respond")
+def ui_respond(
+    ui_request_id: str,
+    *,
+    session_id: str,
+    value: str | None = None,
+    confirmed: str | None = None,
+    cancelled: bool = False,
+    output: OutputFormat = "human",
+) -> None:
+    """Respond to a pending extension UI request.
+
+    Parameters
+    ----------
+    ui_request_id
+        The id from an ``extension_ui_request`` event.
+    session_id
+        Stable readable session handle.
+    value
+        Value for select, input, or editor requests.
+    confirmed
+        Boolean response for confirm requests.
+    cancelled
+        Cancel/dismiss any dialog request.
+    output
+        Output format: human or json.
+    """
+
+    try:
+        asyncio.run(
+            _run_ui_response_command(
+                session_id=session_id,
+                ui_request_id=ui_request_id,
+                value=value,
+                confirmed=_parse_confirmed(confirmed),
+                cancelled=cancelled,
+                output=output,
+            )
+        )
+    except BrokerUnavailableError as exc:
+        print(f"Broker unavailable: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
+    except SessionIdError as exc:
+        _exit_invalid_session(exc)
+    except ValueError as exc:
+        print(f"Invalid UI response: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
 
 
 @app.command

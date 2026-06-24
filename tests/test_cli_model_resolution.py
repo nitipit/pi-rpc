@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 
 from pi_rpc.cli import (
+    _build_ui_response_request,
     _extract_model_refs,
+    _parse_confirmed,
     _print_abort_bash_summary,
     _print_bash_summary,
     _resolve_model_from_available_models,
@@ -86,3 +88,27 @@ def test_print_abort_bash_summary(capsys: pytest.CaptureFixture[str]) -> None:
     _print_abort_bash_summary(response)
 
     assert capsys.readouterr().out.rstrip("\n") == "  abort-bash: nothing to abort"
+
+
+def test_parse_confirmed_values() -> None:
+    assert _parse_confirmed("true") is True
+    assert _parse_confirmed("no") is False
+
+
+def test_build_ui_response_request_with_value() -> None:
+    assert _build_ui_response_request(
+        ui_request_id="ui-1", value="Allow", confirmed=None, cancelled=False
+    ) == {"type": "ui-response", "uiRequestId": "ui-1", "value": "Allow"}
+
+
+def test_build_ui_response_request_with_confirmed_false() -> None:
+    assert _build_ui_response_request(
+        ui_request_id="ui-2", value=None, confirmed=False, cancelled=False
+    ) == {"type": "ui-response", "uiRequestId": "ui-2", "confirmed": False}
+
+
+def test_build_ui_response_request_rejects_multiple_values() -> None:
+    with pytest.raises(ValueError, match="exactly one"):
+        _build_ui_response_request(
+            ui_request_id="ui-3", value="Allow", confirmed=True, cancelled=False
+        )

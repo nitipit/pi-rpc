@@ -16,6 +16,7 @@ BrokerRequestType = Literal[
     "abort",
     "bash",
     "abort_bash",
+    "ui-response",
     "state",
     "models",
     "stats",
@@ -50,6 +51,7 @@ BROKER_REQUEST_TYPES = {
     "abort",
     "bash",
     "abort_bash",
+    "ui-response",
     "state",
     "models",
     "stats",
@@ -128,7 +130,7 @@ class BrokerRequest(Model):
 def validate_broker_request(message: dict[str, Any]) -> BrokerRequestType:
     """Validate a broker request and return its request type."""
     request_type = message.get("type") if isinstance(message, dict) else None
-    if request_type in PASS_THROUGH_REQUEST_TYPES:
+    if request_type in PASS_THROUGH_REQUEST_TYPES or request_type == "ui-response":
         return cast("BrokerRequestType", request_type)
 
     try:

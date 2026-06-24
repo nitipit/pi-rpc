@@ -146,6 +146,9 @@ def write_fake_pi_with_control_command_events(tmp_path: Path) -> Path:
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'bash', 'success': True, 'data': {'exitCode': 0, 'cancelled': False, 'truncated': False, 'output': 'hello from bash'}}), flush=True)\n"
         "    elif payload.get('type') == 'abort_bash':\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': 'abort_bash', 'success': True, 'data': {'aborted': True}}), flush=True)\n"
+        "    elif payload.get('type') == 'extension_ui_response':\n"
+        "        with open('ui-response.jsonl', 'a', encoding='utf-8') as log_file:\n"
+        "            log_file.write(json.dumps(payload) + '\\n')\n"
         "    elif payload.get('type') in ('steer', 'follow_up', 'abort'):\n"
         "        print(json.dumps({'id': payload.get('id'), 'type': 'response', 'command': payload.get('type'), 'success': True}), flush=True)\n"
         "        print(json.dumps({'type': 'agent_end', 'messages': []}), flush=True)\n"
@@ -532,6 +535,64 @@ async def test_broker_server_exports_html_with_conditional_output_path(
             assert response_data.get("path") == "/tmp/out.html"
         else:
             assert response_data.get("path") == "/tmp/generated.html"
+
+        shutdown_connection = await transport.connect()
+        await shutdown_connection.send({"type": "shutdown"})
+        await anext(shutdown_connection.receive())
+        await shutdown_connection.close()
+
+        await asyncio.wait_for(server_task, timeout=1)
+    finally:
+        if not server_task.done():
+            server_task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await server_task
+
+
+@pytest.mark.asyncio
+async def test_broker_server_sends_extension_ui_response_without_pi_ack(tmp_path: Path) -> None:
+    paths = SessionPaths(
+        session_id="test-session",
+        file_stem="test-session-abc123",
+        socket_path=tmp_path / "test.sock",
+        pid_path=tmp_path / "test.pid",
+        metadata_path=tmp_path / "test.json",
+        log_path=tmp_path / "test.log",
+    )
+    fake_pi = write_fake_pi_with_control_command_events(tmp_path)
+    server = BrokerServer(paths=paths, cwd=str(tmp_path), name="Test Session", pi_bin=str(fake_pi))
+    server_task = asyncio.create_task(server.serve())
+
+    try:
+        transport = UnixBrokerTransport(paths.socket_path)
+        for _ in range(100):
+            if paths.socket_path.exists():
+                break
+            await asyncio.sleep(0.01)
+
+        connection = await transport.connect()
+        await connection.send({"type": "ui-response", "uiRequestId": "ui-1", "value": "Allow"})
+        response = await anext(connection.receive())
+        await connection.close()
+
+        assert response == {
+            "type": "response",
+            "command": "extension_ui_response",
+            "success": True,
+            "data": {"id": "ui-1"},
+        }
+
+        for _ in range(100):
+            log_path = tmp_path / "ui-response.jsonl"
+            if log_path.exists() and log_path.read_text(encoding="utf-8"):
+                break
+            await asyncio.sleep(0.01)
+
+        written = (tmp_path / "ui-response.jsonl").read_text(encoding="utf-8").strip()
+        assert written
+        assert '"type": "extension_ui_response"' in written
+        assert '"id": "ui-1"' in written
+        assert '"value": "Allow"' in written
 
         shutdown_connection = await transport.connect()
         await shutdown_connection.send({"type": "shutdown"})

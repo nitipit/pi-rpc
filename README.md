@@ -24,6 +24,7 @@ Implemented so far:
   `last-assistant-text`, and `commands`.
 - human output from assistant text deltas and JSONL output for tools
 - shell command controls via `bash` and `abort-bash`
+- extension UI response bridge via `ui-respond`
 - schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
 
@@ -35,6 +36,7 @@ Read-only visibility remains via `state`, `models`, `stats`, `messages`,
 Session behavior controls are available via `name`, `compact`, `auto-compaction`,
 `auto-retry`, `steering-mode`, `follow-up-mode`, and `abort-retry`.
 Shell controls are available via `bash` and `abort-bash`.
+Extension UI requests from prompt streams can be answered with `ui-respond`.
 Branch/session controls are available via `new-session`, `switch-session`, `clone`,
 `fork`, `fork-messages`, and `export-html`.
 Richer extension UI handling is planned for later versions.
@@ -73,6 +75,9 @@ uv run pi-rpc export-html --session-id pi-rpc-dev
 uv run pi-rpc export-html --session-id pi-rpc-dev --output-path /tmp/session-export.html
 uv run pi-rpc bash --session-id pi-rpc-dev "git status"
 uv run pi-rpc abort-bash --session-id pi-rpc-dev
+uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --value "Allow"
+uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --confirmed true
+uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --cancelled
 uv run pi-rpc steer --session-id pi-rpc-dev --message "Adjust the implementation"
 uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests"
 uv run pi-rpc abort --session-id pi-rpc-dev

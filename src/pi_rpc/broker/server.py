@@ -146,6 +146,7 @@ class BrokerServer:
             "ping": self._ping,
             "status": self._status,
             "shutdown": self._shutdown,
+            "ui-response": self._extension_ui_response,
         }
         handler = handlers.get(request_type)
         if handler is None:
@@ -214,6 +215,45 @@ class BrokerServer:
     async def _shutdown(self, _request: JsonObject) -> JsonObject:
         self._shutdown_event.set()
         return {"type": "shutdown_ack", "session_id": self.paths.session_id}
+
+    async def _extension_ui_response(self, request: JsonObject) -> JsonObject:
+        ui_request_id = request.get("uiRequestId")
+        if not isinstance(ui_request_id, str) or not ui_request_id:
+            return {"type": "error", "error": "ui-response requires uiRequestId"}
+
+        response_fields = [
+            "cancelled" if request.get("cancelled") is True else None,
+            "confirmed" if "confirmed" in request else None,
+            "value" if "value" in request else None,
+        ]
+        present_fields = [field for field in response_fields if field is not None]
+        if len(present_fields) != 1:
+            return {
+                "type": "error",
+                "error": "ui-response requires exactly one of value, confirmed, or cancelled",
+            }
+
+        pi_response: JsonObject = {"type": "extension_ui_response", "id": ui_request_id}
+        if request.get("cancelled") is True:
+            pi_response["cancelled"] = True
+        elif "confirmed" in request:
+            confirmed = request.get("confirmed")
+            if not isinstance(confirmed, bool):
+                return {"type": "error", "error": "confirmed must be a boolean"}
+            pi_response["confirmed"] = confirmed
+        else:
+            value = request.get("value")
+            if not isinstance(value, str):
+                return {"type": "error", "error": "value must be a string"}
+            pi_response["value"] = value
+
+        await self.pi_process.send_notification(pi_response)
+        return {
+            "type": "response",
+            "command": "extension_ui_response",
+            "success": True,
+            "data": {"id": ui_request_id},
+        }
 
     def _cleanup_runtime_files(self) -> None:
         for path in (self.paths.socket_path, self.paths.pid_path):

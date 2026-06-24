@@ -105,6 +105,15 @@ class PiRpcProcess:
         await self.process.stdin.drain()
         return await future
 
+    async def send_notification(self, command: JsonObject) -> None:
+        """Send one Pi RPC notification that does not produce a response."""
+        if self.process is None or self.process.stdin is None or self.returncode is not None:
+            msg = "Pi RPC process is not running"
+            raise PiProcessError(msg)
+
+        self.process.stdin.write(encode_jsonl(command))
+        await self.process.stdin.drain()
+
     async def stop(self) -> None:
         """Terminate the child process and reader tasks."""
         process = self.process
