@@ -1,6 +1,6 @@
 [project]
 name = "pi-rpc"
-version = "0.15.0"
+version = "0.16.0"
 description = "Command-line remote control for long-running Pi RPC sessions"
 readme = "README.md"
 authors = [

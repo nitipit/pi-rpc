@@ -15,7 +15,7 @@ Implemented so far:
 - a Unix-socket broker lifecycle
 - a managed `pi --mode rpc --session-id <id>` subprocess behind the broker
 - readiness handshake through Pi RPC `get_state`
-- prompt forwarding to the running Pi RPC process
+- prompt forwarding to the running Pi RPC process, including streaming queue behavior
 - foreground event streaming until `agent_end`
 - run-control pass-through for `steer`, `follow_up`, and `abort`
 - model and thinking controls via `model`, `cycle-model`, `thinking`, `cycle-thinking`
@@ -23,7 +23,7 @@ Implemented so far:
 - read-only visibility for `state`, `models`, `stats`, `messages`,
   `last-assistant-text`, and `commands`.
 - human output from assistant text deltas and JSONL output for tools
-- shell command controls via `bash` and `abort-bash`
+- shell command controls via `bash` and `abort-bash`, including context exclusion
 - extension UI response bridge via `ui-respond`
 - interactive terminal answers for prompt-stream dialog UI requests
 - schema validation for broker control messages through `dictify`
@@ -52,6 +52,7 @@ uv run pi-rpc start --session-id pi-rpc-dev --name "Build pi-rpc"
 uv run pi-rpc status --session-id pi-rpc-dev
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Hello from pi-rpc"
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Run with manual UI responses" --no-interactive-ui
+uv run pi-rpc prompt --session-id pi-rpc-dev --message "Queue this" --streaming-behavior steer
 uv run pi-rpc state --session-id pi-rpc-dev
 uv run pi-rpc models --session-id pi-rpc-dev
 uv run pi-rpc stats --session-id pi-rpc-dev
@@ -77,6 +78,7 @@ uv run pi-rpc fork-messages --session-id pi-rpc-dev
 uv run pi-rpc export-html --session-id pi-rpc-dev
 uv run pi-rpc export-html --session-id pi-rpc-dev --output-path /tmp/session-export.html
 uv run pi-rpc bash --session-id pi-rpc-dev "git status"
+uv run pi-rpc bash --session-id pi-rpc-dev "git diff" --exclude-from-context
 uv run pi-rpc abort-bash --session-id pi-rpc-dev
 uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --value "Allow"
 uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --confirmed true

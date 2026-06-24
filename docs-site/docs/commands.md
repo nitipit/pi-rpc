@@ -15,8 +15,8 @@ sidebar_position: 2
 
 ## Prompting and run control
 
-- `prompt` streams assistant text and can answer dialog extension UI requests
-  interactively in human terminal output
+- `prompt` streams assistant text, can queue with `--streaming-behavior`, and
+  can answer dialog extension UI requests interactively in human terminal output
 - `steer`, `follow-up`, `abort`
 
 ## Visibility
@@ -32,7 +32,8 @@ sidebar_position: 2
 
 ## Shell and extension UI
 
-- `bash`, `abort-bash`
+- `bash`, `abort-bash`; use `bash --exclude-from-context` for inspection output
+  that should not be injected into the next prompt
 - `ui-respond`
 
 Each command supports `--session-id`, which is the key contract for explicitness.

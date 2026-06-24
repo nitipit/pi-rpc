@@ -24,6 +24,7 @@ AUTO_MODES = ("on", "off")
 AutoMode = Literal["on", "off"]
 SESSION_MODES = ("all", "one-at-a-time")
 SteeringMode = Literal["all", "one-at-a-time"]
+StreamingBehavior = Literal["steer", "followUp"]
 
 PI_READ_ONLY_COMMANDS = {
     "state": "get_state",
@@ -326,12 +327,16 @@ async def _run_prompt(
     message: str,
     output: OutputFormat,
     interactive_ui: bool,
+    streaming_behavior: StreamingBehavior | None,
 ) -> None:
     """Send a prompt command and stream the Pi RPC event response."""
 
     saw_response = False
     accepted = False
-    async for frame in stream_broker(session_id, {"type": "prompt", "message": message}):
+    async for frame in stream_broker(
+        session_id,
+        _build_prompt_request(message=message, streaming_behavior=streaming_behavior),
+    ):
         if output == "json":
             _print_json_frame(frame)
             if frame.get("type") == "response":
@@ -612,12 +617,16 @@ async def _run_bash_command(
     session_id: str,
     command: str,
     output: OutputFormat,
+    exclude_from_context: bool,
 ) -> None:
     """Run a shell command in the active session."""
 
     await _run_control_request(
         session_id=session_id,
-        request={"type": "bash", "command": command},
+        request=_build_bash_request(
+            command=command,
+            exclude_from_context=exclude_from_context,
+        ),
         expected_command="bash",
         output=output,
         command_label="bash",
@@ -667,6 +676,28 @@ async def _run_ui_response_command(
         command_label="ui-respond",
         response_printer=_print_ui_response_summary,
     )
+
+
+def _build_prompt_request(
+    *,
+    message: str,
+    streaming_behavior: StreamingBehavior | None,
+) -> JsonObject:
+    """Build a prompt request for the broker."""
+
+    request: JsonObject = {"type": "prompt", "message": message}
+    if streaming_behavior is not None:
+        request["streamingBehavior"] = streaming_behavior
+    return request
+
+
+def _build_bash_request(*, command: str, exclude_from_context: bool) -> JsonObject:
+    """Build a bash request for the broker."""
+
+    request: JsonObject = {"type": "bash", "command": command}
+    if exclude_from_context:
+        request["excludeFromContext"] = True
+    return request
 
 
 def _parse_confirmed(value: str | None) -> bool | None:
@@ -1247,6 +1278,7 @@ def prompt(
     message: str,
     output: OutputFormat = "human",
     interactive_ui: bool = True,
+    streaming_behavior: StreamingBehavior | None = None,
 ) -> None:
     """Send a prompt to the managed Pi session and stream events.
 
@@ -1260,6 +1292,8 @@ def prompt(
         Output format: human or json.
     interactive_ui
         Prompt for extension UI dialog responses when running in a terminal.
+    streaming_behavior
+        How Pi should queue this prompt if the agent is already streaming.
     """
 
     try:
@@ -1269,6 +1303,7 @@ def prompt(
                 message=message,
                 output=output,
                 interactive_ui=interactive_ui,
+                streaming_behavior=streaming_behavior,
             )
         )
     except BrokerUnavailableError as exc:
@@ -1429,6 +1464,7 @@ def bash(
     *,
     session_id: str,
     output: OutputFormat = "human",
+    exclude_from_context: bool = False,
 ) -> None:
     """Run a shell command in the active Pi session.
 
@@ -1440,10 +1476,19 @@ def bash(
         Stable readable session handle.
     output
         Output format: human or json.
+    exclude_from_context
+        Run the command without adding its output to the next prompt context.
     """
 
     try:
-        asyncio.run(_run_bash_command(session_id=session_id, command=command, output=output))
+        asyncio.run(
+            _run_bash_command(
+                session_id=session_id,
+                command=command,
+                output=output,
+                exclude_from_context=exclude_from_context,
+            )
+        )
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
