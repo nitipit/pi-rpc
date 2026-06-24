@@ -27,6 +27,7 @@ Implemented so far:
 - extension UI response bridge via `ui-respond`
 - schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
+- Docusaurus docs foundation (`docs-site/`) for command and extension UI docs
 
 Steering/follow-up/abort are available via `steer`, `follow-up`, and `abort`.
 Model/thinking controls are now available via `model`, `cycle-model`,
@@ -88,6 +89,14 @@ uv run pi-rpc sessions
 `--session-id` is the stable, human-readable handle for one managed Pi RPC
 session. Prefer shell-friendly ids such as `pi-rpc-dev`, `review-main`, or
 `refactor.auth`.
+
+## Documentation
+
+```bash
+deno task docs:dev
+
+deno task docs:build
+```
 
 ## Development
 

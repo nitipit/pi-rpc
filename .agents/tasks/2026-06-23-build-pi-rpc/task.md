@@ -38,6 +38,7 @@ validated, and committed before moving on.
 - [x] v0.10 session file/branch controls: new-session, switch-session, clone, fork, fork-messages, export-html.
 - [x] v0.11 shell command controls: `bash` and `abort-bash`.
 - [x] v0.12 extension UI response bridge: `ui-respond`.
+- [x] v0.13 Docusaurus docs foundation with Deno tasks and baseline pages (`intro`, `commands`, `extension-ui`).
 - [ ] Later versions: interactive extension UI, docs polish, packaging, and remaining session mutators.
 
 ## Attachments

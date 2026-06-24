@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "docs:dev": "cd docs-site && deno run -A --node-modules-dir npm:@docusaurus/core@3.10.1/docusaurus start",
+    "docs:build": "cd docs-site && deno run -A --node-modules-dir npm:@docusaurus/core@3.10.1/docusaurus build"
+  }
+}
