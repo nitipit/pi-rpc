@@ -15,9 +15,11 @@ sidebar_position: 2
 
 ## Prompting and run control
 
-- `prompt` streams assistant text, can queue with `--streaming-behavior`, and
-  can answer dialog extension UI requests interactively in human terminal output
-- `steer`, `follow-up`, `abort`
+- `prompt` streams assistant text, can attach images with repeated `--image`,
+  can queue with `--streaming-behavior`, and can answer dialog extension UI
+  requests interactively in human terminal output
+- `steer`, `follow-up`, `abort`; `steer` and `follow-up` can also attach images
+  with repeated `--image`
 
 ## Visibility
 

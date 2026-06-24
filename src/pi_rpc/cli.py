@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
+import mimetypes
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import Literal, NoReturn, cast
 
 from cyclopts import App
@@ -328,6 +331,7 @@ async def _run_prompt(
     output: OutputFormat,
     interactive_ui: bool,
     streaming_behavior: StreamingBehavior | None,
+    image_paths: Sequence[str] | None,
 ) -> None:
     """Send a prompt command and stream the Pi RPC event response."""
 
@@ -335,7 +339,11 @@ async def _run_prompt(
     accepted = False
     async for frame in stream_broker(
         session_id,
-        _build_prompt_request(message=message, streaming_behavior=streaming_behavior),
+        _build_prompt_request(
+            message=message,
+            streaming_behavior=streaming_behavior,
+            image_paths=image_paths,
+        ),
     ):
         if output == "json":
             _print_json_frame(frame)
@@ -380,12 +388,15 @@ async def _run_control_command(
     command: str,
     output: OutputFormat,
     message: str | None = None,
+    image_paths: Sequence[str] | None = None,
 ) -> None:
     """Send a Pi runtime control command and handle response semantics."""
 
-    request: JsonObject = {"type": command}
-    if message is not None:
-        request["message"] = message
+    request = _build_message_request(
+        command=command,
+        message=message,
+        image_paths=image_paths,
+    )
 
     await _run_control_request(
         session_id=session_id,
@@ -682,13 +693,59 @@ def _build_prompt_request(
     *,
     message: str,
     streaming_behavior: StreamingBehavior | None,
+    image_paths: Sequence[str] | None,
 ) -> JsonObject:
     """Build a prompt request for the broker."""
 
-    request: JsonObject = {"type": "prompt", "message": message}
+    request = _build_message_request(
+        command="prompt",
+        message=message,
+        image_paths=image_paths,
+    )
     if streaming_behavior is not None:
         request["streamingBehavior"] = streaming_behavior
     return request
+
+
+def _build_message_request(
+    *,
+    command: str,
+    message: str | None,
+    image_paths: Sequence[str] | None,
+) -> JsonObject:
+    """Build a message-style request with optional images."""
+
+    request: JsonObject = {"type": command}
+    if message is not None:
+        request["message"] = message
+    images = _build_image_payloads(image_paths)
+    if images:
+        request["images"] = images
+    return request
+
+
+def _build_image_payloads(image_paths: Sequence[str] | None) -> list[JsonObject]:
+    """Load image files into Pi RPC ImageContent payloads."""
+
+    if not image_paths:
+        return []
+    return [_build_image_payload(path_text) for path_text in image_paths]
+
+
+def _build_image_payload(path_text: str) -> JsonObject:
+    """Load one image file into a Pi RPC ImageContent payload."""
+
+    path = Path(path_text).expanduser()
+    mime_type = mimetypes.guess_type(str(path))[0]
+    if mime_type is None or not mime_type.startswith("image/"):
+        msg = f"Unsupported image type for {path}. Use a file with an image MIME type."
+        raise ValueError(msg)
+    try:
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+    except OSError as exc:
+        msg = f"Unable to read image {path}: {exc}"
+        raise ValueError(msg) from exc
+    return {"type": "image", "data": data, "mimeType": mime_type}
 
 
 def _build_bash_request(*, command: str, exclude_from_context: bool) -> JsonObject:
@@ -1279,6 +1336,7 @@ def prompt(
     output: OutputFormat = "human",
     interactive_ui: bool = True,
     streaming_behavior: StreamingBehavior | None = None,
+    image: list[str] | None = None,
 ) -> None:
     """Send a prompt to the managed Pi session and stream events.
 
@@ -1294,6 +1352,8 @@ def prompt(
         Prompt for extension UI dialog responses when running in a terminal.
     streaming_behavior
         How Pi should queue this prompt if the agent is already streaming.
+    image
+        Image file path to attach; repeat for multiple images.
     """
 
     try:
@@ -1304,8 +1364,12 @@ def prompt(
                 output=output,
                 interactive_ui=interactive_ui,
                 streaming_behavior=streaming_behavior,
+                image_paths=image,
             )
         )
+    except ValueError as exc:
+        print(f"Invalid image attachment: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
@@ -1314,7 +1378,13 @@ def prompt(
 
 
 @app.command
-def steer(*, session_id: str, message: str, output: OutputFormat = "human") -> None:
+def steer(
+    *,
+    session_id: str,
+    message: str,
+    output: OutputFormat = "human",
+    image: list[str] | None = None,
+) -> None:
     """Queue a steering message while the session is running.
 
     Parameters
@@ -1325,14 +1395,23 @@ def steer(*, session_id: str, message: str, output: OutputFormat = "human") -> N
         Steering text to send to the active Pi session.
     output
         Output format: human or json.
+    image
+        Image file path to attach; repeat for multiple images.
     """
 
     try:
         asyncio.run(
             _run_control_command(
-                session_id=session_id, command="steer", message=message, output=output
+                session_id=session_id,
+                command="steer",
+                message=message,
+                output=output,
+                image_paths=image,
             )
         )
+    except ValueError as exc:
+        print(f"Invalid image attachment: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
@@ -1341,7 +1420,13 @@ def steer(*, session_id: str, message: str, output: OutputFormat = "human") -> N
 
 
 @app.command(name="follow-up")
-def follow_up(*, session_id: str, message: str, output: OutputFormat = "human") -> None:
+def follow_up(
+    *,
+    session_id: str,
+    message: str,
+    output: OutputFormat = "human",
+    image: list[str] | None = None,
+) -> None:
     """Queue a follow-up message to be processed after current work finishes.
 
     Parameters
@@ -1352,14 +1437,23 @@ def follow_up(*, session_id: str, message: str, output: OutputFormat = "human") 
         Follow-up text to send via Pi RPC.
     output
         Output format: human or json.
+    image
+        Image file path to attach; repeat for multiple images.
     """
 
     try:
         asyncio.run(
             _run_control_command(
-                session_id=session_id, command="follow_up", message=message, output=output
+                session_id=session_id,
+                command="follow_up",
+                message=message,
+                output=output,
+                image_paths=image,
             )
         )
+    except ValueError as exc:
+        print(f"Invalid image attachment: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

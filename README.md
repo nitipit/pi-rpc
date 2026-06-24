@@ -15,9 +15,9 @@ Implemented so far:
 - a Unix-socket broker lifecycle
 - a managed `pi --mode rpc --session-id <id>` subprocess behind the broker
 - readiness handshake through Pi RPC `get_state`
-- prompt forwarding to the running Pi RPC process, including streaming queue behavior
+- prompt forwarding to the running Pi RPC process, including streaming queue behavior and image attachments
 - foreground event streaming until `agent_end`
-- run-control pass-through for `steer`, `follow_up`, and `abort`
+- run-control pass-through for `steer`, `follow_up`, and `abort`, with image attachments for queued text controls
 - model and thinking controls via `model`, `cycle-model`, `thinking`, `cycle-thinking`
 - session behavior controls via `name`, `compact`, queue modes, retry, and auto-compaction
 - read-only visibility for `state`, `models`, `stats`, `messages`,
@@ -53,6 +53,7 @@ uv run pi-rpc status --session-id pi-rpc-dev
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Hello from pi-rpc"
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Run with manual UI responses" --no-interactive-ui
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Queue this" --streaming-behavior steer
+uv run pi-rpc prompt --session-id pi-rpc-dev --message "Describe this" --image ./screenshot.png
 uv run pi-rpc state --session-id pi-rpc-dev
 uv run pi-rpc models --session-id pi-rpc-dev
 uv run pi-rpc stats --session-id pi-rpc-dev
@@ -83,8 +84,8 @@ uv run pi-rpc abort-bash --session-id pi-rpc-dev
 uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --value "Allow"
 uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --confirmed true
 uv run pi-rpc ui-respond --session-id pi-rpc-dev ui-request-id --cancelled
-uv run pi-rpc steer --session-id pi-rpc-dev --message "Adjust the implementation"
-uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests"
+uv run pi-rpc steer --session-id pi-rpc-dev --message "Adjust the implementation" --image ./screenshot.png
+uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests" --image ./failure.png
 uv run pi-rpc abort --session-id pi-rpc-dev
 uv run pi-rpc stop --session-id pi-rpc-dev
 uv run pi-rpc sessions
