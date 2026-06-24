@@ -25,17 +25,23 @@ class PiRpcProcess:
     def __init__(
         self,
         *,
-        session_id: str,
+        session_id: str | None,
         cwd: str,
         log_path: str | Path,
         pi_bin: str = "pi",
         name: str | None = None,
+        no_session: bool = False,
+        model: str | None = None,
+        thinking: str | None = None,
     ) -> None:
         self.session_id = session_id
         self.cwd = cwd
         self.log_path = Path(log_path)
         self.pi_bin = pi_bin
         self.name = name
+        self.no_session = no_session
+        self.model = model
+        self.thinking = thinking
         self.process: asyncio.subprocess.Process | None = None
         self.ready = False
         self.last_state: JsonObject | None = None
@@ -150,9 +156,20 @@ class PiRpcProcess:
         }
 
     def _command(self) -> Sequence[str]:
-        command = [self.pi_bin, "--mode", "rpc", "--session-id", self.session_id]
+        command = [self.pi_bin, "--mode", "rpc"]
+        if self.no_session:
+            command.append("--no-session")
+        elif self.session_id is not None:
+            command.extend(["--session-id", self.session_id])
+        else:
+            msg = "Pi RPC process requires session_id unless no_session is enabled"
+            raise PiProcessError(msg)
         if self.name:
             command.extend(["--name", self.name])
+        if self.model:
+            command.extend(["--model", self.model])
+        if self.thinking:
+            command.extend(["--thinking", self.thinking])
         return command
 
     async def _read_stdout(self) -> None:

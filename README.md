@@ -15,13 +15,15 @@ Implemented so far:
 - a Unix-socket broker lifecycle
 - a managed `pi --mode rpc --session-id <id>` subprocess behind the broker
 - readiness handshake through Pi RPC `get_state`
-- prompt forwarding to the running Pi RPC process, including streaming queue behavior and image attachments
+- prompt forwarding to the running Pi RPC process, including streaming queue behavior, image attachments, and optional detach
 - foreground event streaming until `agent_end`
 - run-control pass-through for `steer`, `follow_up`, and `abort`, with image attachments for queued text controls
 - model and thinking controls via `model`, `cycle-model`, `thinking`, `cycle-thinking`
 - session behavior controls via `name`, `compact`, queue modes, retry, and auto-compaction
 - read-only visibility for `state`, `models`, `stats`, `messages`,
   `last-assistant-text`, and `commands`.
+- stateless disposable `run` tasks backed by `pi --mode rpc --no-session`
+- detached job tracking for stateless `run` and stateful `prompt`
 - human output from assistant text deltas and JSONL output for tools
 - shell command controls via `bash` and `abort-bash`, including context exclusion
 - extension UI response bridge via `ui-respond`
@@ -42,6 +44,8 @@ Extension UI dialog requests from human prompt streams are answered interactivel
 when stdin is a terminal; they can also be answered manually with `ui-respond`.
 Branch/session controls are available via `new-session`, `switch-session`, `clone`,
 `fork`, `fork-messages`, and `export-html`.
+Stateless one-shot tasks are available via `run`. Detached jobs are available
+with `run --detach`, `prompt --detach`, `jobs`, `job-status`, and `job-result`.
 
 ## First commands
 
@@ -54,6 +58,9 @@ uv run pi-rpc prompt --session-id pi-rpc-dev --message "Hello from pi-rpc"
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Run with manual UI responses" --no-interactive-ui
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Queue this" --streaming-behavior steer
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Describe this" --image ./screenshot.png
+uv run pi-rpc prompt --session-id pi-rpc-dev --message "Work in background" --detach
+uv run pi-rpc run --message "Review this diff" --model openai-codex/gpt-5.3-codex-spark --thinking low
+uv run pi-rpc run --message "Review this diff in background" --detach
 uv run pi-rpc state --session-id pi-rpc-dev
 uv run pi-rpc models --session-id pi-rpc-dev
 uv run pi-rpc stats --session-id pi-rpc-dev
@@ -89,6 +96,9 @@ uv run pi-rpc follow-up --session-id pi-rpc-dev --message "Then run tests" --ima
 uv run pi-rpc abort --session-id pi-rpc-dev
 uv run pi-rpc stop --session-id pi-rpc-dev
 uv run pi-rpc sessions
+uv run pi-rpc jobs
+uv run pi-rpc job-status job-20260624000000-abc123ef
+uv run pi-rpc job-result job-20260624000000-abc123ef
 ```
 
 `--session-id` is the stable, human-readable handle for one managed Pi RPC

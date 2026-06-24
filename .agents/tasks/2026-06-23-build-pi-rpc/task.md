@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-24T08:54:57+07:00
+updated: 2026-06-24T09:55:36+07:00
 blocked_by: []
 ---
 
@@ -43,6 +43,7 @@ validated, and committed before moving on.
 - [x] v0.15 interactive extension UI handling for human prompt streams.
 - [x] v0.16 RPC payload controls for prompt streaming behavior and bash context exclusion.
 - [x] v0.17 image attachments for prompt, steer, and follow-up.
+- [x] v0.18 CLI modularization, stateless run, and detached jobs.
 - [ ] Later versions: docs polish and final release hygiene.
 
 ## Attachments
@@ -78,3 +79,4 @@ modular so Unix socket can later grow into TCP or other transports.
 - 2026-06-24T08:17:39+07:00 — Implemented v0.15 interactive extension UI handling for human prompt streams.
 - 2026-06-24T08:35:41+07:00 — Implemented v0.16 RPC payload controls for prompt streaming behavior and bash context exclusion.
 - 2026-06-24T08:54:57+07:00 — Implemented v0.17 image attachments for prompt, steer, and follow-up.
+- 2026-06-24T09:55:36+07:00 — Implemented v0.18 CLI modularization, stateless run, and detached jobs.

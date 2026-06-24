@@ -26,6 +26,10 @@ After each version, choose the next meaningful product version from the
 remaining goal gaps before continuing. Do not commit broken or partial
 implementation unless explicitly asked for a checkpoint commit.
 
+Prefer source files around 500-1000 lines. When a file exceeds about 1000 lines,
+new substantial work should first look for cohesive extraction opportunities.
+Avoid mechanical splitting; extract by responsibility so modules stay readable.
+
 Version scope may be adjusted as the product becomes clearer. Repo-local roles
 may also be created, revised, or removed when doing so improves product quality,
 implementation flow, or review quality.
