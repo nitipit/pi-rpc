@@ -15,7 +15,8 @@ sidebar_position: 2
 
 ## Prompting and run control
 
-- `prompt`
+- `prompt` streams assistant text and can answer dialog extension UI requests
+  interactively in human terminal output
 - `steer`, `follow-up`, `abort`
 
 ## Visibility

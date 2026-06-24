@@ -34,6 +34,7 @@ PI_READ_ONLY_COMMANDS = {
     "commands": "get_commands",
     "fork-messages": "get_fork_messages",
 }
+DIALOG_UI_METHODS = {"select", "confirm", "input", "editor"}
 
 app = App(help="Remote control for long-running Pi RPC sessions.")
 
@@ -73,7 +74,12 @@ def _print_text_delta(event: JsonObject) -> None:
         print(delta, end="", flush=True)
 
 
-def _print_extension_ui_request(event: JsonObject, *, session_id: str) -> None:
+def _print_extension_ui_request(
+    event: JsonObject,
+    *,
+    session_id: str,
+    manual_hint: bool,
+) -> None:
     """Print a compact notice for extension UI requests during human streaming."""
 
     if event.get("type") != "extension_ui_request":
@@ -85,8 +91,204 @@ def _print_extension_ui_request(event: JsonObject, *, session_id: str) -> None:
     print()
     print(f"Extension UI request: {method} {request_id}")
     print(f"  {title}")
-    if isinstance(request_id, str):
+    if (
+        manual_hint
+        and isinstance(request_id, str)
+        and isinstance(method, str)
+        and method in DIALOG_UI_METHODS
+    ):
         print(f"  respond: pi-rpc ui-respond --session-id {session_id} {request_id} ...")
+
+
+def _extension_ui_request_to_response(
+    event: JsonObject,
+    read_line: Callable[[str], str] = input,
+) -> JsonObject | None:
+    """Prompt for a dialog extension UI response and return a broker request."""
+
+    if event.get("type") != "extension_ui_request":
+        return None
+
+    request_id = event.get("id")
+    method = event.get("method")
+    if not isinstance(request_id, str) or not isinstance(method, str):
+        return None
+    if method == "select":
+        return _select_ui_response_request(event, request_id, read_line)
+    if method == "confirm":
+        return _confirm_ui_response_request(request_id, read_line)
+    if method == "input":
+        return _input_ui_response_request(event, request_id, read_line)
+    if method == "editor":
+        return _editor_ui_response_request(event, request_id, read_line)
+    return None
+
+
+def _select_ui_response_request(
+    event: JsonObject,
+    request_id: str,
+    read_line: Callable[[str], str],
+) -> JsonObject | None:
+    """Build a response request for a select dialog."""
+
+    raw_options = event.get("options")
+    if not isinstance(raw_options, list):
+        return None
+    options = [option for option in raw_options if isinstance(option, str)]
+    if not options:
+        return None
+
+    for index, option in enumerate(options, start=1):
+        print(f"  {index}. {option}")
+
+    while True:
+        answer = read_line("  Choose 1-N, exact value, or /cancel: ").strip()
+        if answer == "/cancel" or answer == "":
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value=None,
+                confirmed=None,
+                cancelled=True,
+            )
+        if answer.isdigit():
+            index = int(answer)
+            if 1 <= index <= len(options):
+                return _build_ui_response_request(
+                    ui_request_id=request_id,
+                    value=options[index - 1],
+                    confirmed=None,
+                    cancelled=False,
+                )
+        if answer in options:
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value=answer,
+                confirmed=None,
+                cancelled=False,
+            )
+        print("  Invalid selection.")
+
+
+def _confirm_ui_response_request(
+    request_id: str,
+    read_line: Callable[[str], str],
+) -> JsonObject:
+    """Build a response request for a confirm dialog."""
+
+    while True:
+        answer = read_line("  Confirm? [y/n, /cancel]: ").strip().lower()
+        if answer == "/cancel":
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value=None,
+                confirmed=None,
+                cancelled=True,
+            )
+        if answer in {"y", "yes"}:
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value=None,
+                confirmed=True,
+                cancelled=False,
+            )
+        if answer in {"", "n", "no"}:
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value=None,
+                confirmed=False,
+                cancelled=False,
+            )
+        print("  Please answer y, n, or /cancel.")
+
+
+def _input_ui_response_request(
+    event: JsonObject,
+    request_id: str,
+    read_line: Callable[[str], str],
+) -> JsonObject:
+    """Build a response request for an input dialog."""
+
+    placeholder = event.get("placeholder")
+    prompt = "  Value"
+    if isinstance(placeholder, str) and placeholder:
+        prompt += f" ({placeholder})"
+    prompt += " [/cancel to cancel]: "
+    answer = read_line(prompt)
+    if answer == "/cancel":
+        return _build_ui_response_request(
+            ui_request_id=request_id,
+            value=None,
+            confirmed=None,
+            cancelled=True,
+        )
+    return _build_ui_response_request(
+        ui_request_id=request_id,
+        value=answer,
+        confirmed=None,
+        cancelled=False,
+    )
+
+
+def _editor_ui_response_request(
+    event: JsonObject,
+    request_id: str,
+    read_line: Callable[[str], str],
+) -> JsonObject:
+    """Build a response request for an editor dialog using line-based input."""
+
+    prefill = event.get("prefill")
+    if isinstance(prefill, str) and prefill:
+        print("  Current value:")
+        for line in prefill.splitlines():
+            print(f"    {line}")
+    print("  Enter text. Submit with .end on its own line; cancel with .cancel.")
+
+    lines: list[str] = []
+    while True:
+        line = read_line("  > ")
+        if line == ".cancel":
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value=None,
+                confirmed=None,
+                cancelled=True,
+            )
+        if line == ".end":
+            return _build_ui_response_request(
+                ui_request_id=request_id,
+                value="\n".join(lines),
+                confirmed=None,
+                cancelled=False,
+            )
+        lines.append(line)
+
+
+async def _maybe_interactive_extension_ui_response(
+    event: JsonObject,
+    *,
+    session_id: str,
+    interactive_ui: bool,
+) -> None:
+    """Respond to a dialog extension UI request when prompt mode is interactive."""
+
+    if event.get("type") != "extension_ui_request":
+        return
+    if not interactive_ui or not sys.stdin.isatty():
+        return
+    method = event.get("method")
+    if not isinstance(method, str) or method not in DIALOG_UI_METHODS:
+        return
+
+    request = await asyncio.to_thread(_extension_ui_request_to_response, event)
+    if request is None:
+        return
+
+    response = await request_broker(session_id, request)
+    if response.get("success") is True:
+        print("  UI response sent.")
+        return
+    error = response.get("error", "failed to send UI response")
+    print(f"  UI response failed: {error}", file=sys.stderr)
 
 
 def _broker_status_human(data: dict[str, object]) -> None:
@@ -118,7 +320,13 @@ def _status_human(view: SessionStatusView) -> None:
         print(f"Note:    {view.note}")
 
 
-async def _run_prompt(*, session_id: str, message: str, output: OutputFormat) -> None:
+async def _run_prompt(
+    *,
+    session_id: str,
+    message: str,
+    output: OutputFormat,
+    interactive_ui: bool,
+) -> None:
     """Send a prompt command and stream the Pi RPC event response."""
 
     saw_response = False
@@ -145,7 +353,13 @@ async def _run_prompt(*, session_id: str, message: str, output: OutputFormat) ->
         if frame.get("type") == "agent_end":
             print()
 
-        _print_extension_ui_request(frame, session_id=session_id)
+        can_interact = interactive_ui and sys.stdin.isatty()
+        _print_extension_ui_request(frame, session_id=session_id, manual_hint=not can_interact)
+        await _maybe_interactive_extension_ui_response(
+            frame,
+            session_id=session_id,
+            interactive_ui=interactive_ui,
+        )
         _print_text_delta(frame)
 
     if not saw_response:
@@ -1032,6 +1246,7 @@ def prompt(
     session_id: str,
     message: str,
     output: OutputFormat = "human",
+    interactive_ui: bool = True,
 ) -> None:
     """Send a prompt to the managed Pi session and stream events.
 
@@ -1043,10 +1258,19 @@ def prompt(
         Prompt content to send via Pi RPC.
     output
         Output format: human or json.
+    interactive_ui
+        Prompt for extension UI dialog responses when running in a terminal.
     """
 
     try:
-        asyncio.run(_run_prompt(session_id=session_id, message=message, output=output))
+        asyncio.run(
+            _run_prompt(
+                session_id=session_id,
+                message=message,
+                output=output,
+                interactive_ui=interactive_ui,
+            )
+        )
     except BrokerUnavailableError as exc:
         print(f"Broker unavailable: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

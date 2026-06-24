@@ -25,6 +25,7 @@ Implemented so far:
 - human output from assistant text deltas and JSONL output for tools
 - shell command controls via `bash` and `abort-bash`
 - extension UI response bridge via `ui-respond`
+- interactive terminal answers for prompt-stream dialog UI requests
 - schema validation for broker control messages through `dictify`
 - first tests and validation tooling (`ruff`, `ty`, `pytest`)
 - Docusaurus docs foundation (`docs-site/`) for command and extension UI docs
@@ -37,10 +38,10 @@ Read-only visibility remains via `state`, `models`, `stats`, `messages`,
 Session behavior controls are available via `name`, `compact`, `auto-compaction`,
 `auto-retry`, `steering-mode`, `follow-up-mode`, and `abort-retry`.
 Shell controls are available via `bash` and `abort-bash`.
-Extension UI requests from prompt streams can be answered with `ui-respond`.
+Extension UI dialog requests from human prompt streams are answered interactively
+when stdin is a terminal; they can also be answered manually with `ui-respond`.
 Branch/session controls are available via `new-session`, `switch-session`, `clone`,
 `fork`, `fork-messages`, and `export-html`.
-Richer extension UI handling is planned for later versions.
 
 ## First commands
 
@@ -50,6 +51,7 @@ uv run pi-rpc paths --session-id pi-rpc-dev
 uv run pi-rpc start --session-id pi-rpc-dev --name "Build pi-rpc"
 uv run pi-rpc status --session-id pi-rpc-dev
 uv run pi-rpc prompt --session-id pi-rpc-dev --message "Hello from pi-rpc"
+uv run pi-rpc prompt --session-id pi-rpc-dev --message "Run with manual UI responses" --no-interactive-ui
 uv run pi-rpc state --session-id pi-rpc-dev
 uv run pi-rpc models --session-id pi-rpc-dev
 uv run pi-rpc stats --session-id pi-rpc-dev

@@ -3,7 +3,7 @@ id: 2026-06-23-build-pi-rpc
 title: Build pi-rpc
 status: doing
 created: 2026-06-23T23:00:10+07:00
-updated: 2026-06-24T08:07:31+07:00
+updated: 2026-06-24T08:17:39+07:00
 blocked_by: []
 ---
 
@@ -40,7 +40,8 @@ validated, and committed before moving on.
 - [x] v0.12 extension UI response bridge: `ui-respond`.
 - [x] v0.13 Docusaurus docs foundation with Deno tasks and baseline pages (`intro`, `commands`, `extension-ui`).
 - [x] v0.14 CI and packaging validation workflow.
-- [ ] Later versions: interactive extension UI, docs polish, packaging, and remaining session mutators.
+- [x] v0.15 interactive extension UI handling for human prompt streams.
+- [ ] Later versions: docs polish and remaining session mutators.
 
 ## Attachments
 
@@ -72,3 +73,4 @@ modular so Unix socket can later grow into TCP or other transports.
 - 2026-06-24T07:46:50+07:00 — Implemented v0.12 extension UI response bridge.
 - 2026-06-24T08:05:05+07:00 — Implemented v0.13 Docusaurus docs foundation.
 - 2026-06-24T08:07:31+07:00 — Implemented v0.14 CI and packaging validation workflow.
+- 2026-06-24T08:17:39+07:00 — Implemented v0.15 interactive extension UI handling for human prompt streams.
